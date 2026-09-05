@@ -1,0 +1,6 @@
+{
+  "name": "Berry Dashboard",
+  "description": "Pixel-perfect Berry Dashboard with full Dashboard, Orders List, Customer List, and Product Details pages with interactive Add and Delete product capabilities, styled 100% to match Berry UI design.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
