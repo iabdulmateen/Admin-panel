@@ -23,7 +23,7 @@ export default function App() {
     borderRadius: 12,
     fontFamily: "'Plus Jakarta Sans', sans-serif",
     isDark: false,
-    navCollapsed: false,
+    navCollapsed: true,
     inspectorMode: false
   });
 

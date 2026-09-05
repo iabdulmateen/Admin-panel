@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { 
   MoreHorizontal, 
   ArrowUpRight, 
@@ -23,6 +23,62 @@ export const BerryDashboardView: React.FC<BerryDashboardViewProps> = ({
   const [growthFilter, setGrowthFilter] = useState<'Today' | 'This Month' | 'This Year'>('Today');
   const [animCounter, setAnimCounter] = useState<number>(0);
   const [hoveredMonthIdx, setHoveredMonthIdx] = useState<number | null>(null);
+
+  // Scroll detection refs and states
+  const chartRef = useRef<HTMLDivElement>(null);
+  const bajajChartRef = useRef<HTMLDivElement>(null);
+  const [isChartInView, setIsChartInView] = useState<boolean>(false);
+  const [isBajajInView, setIsBajajInView] = useState<boolean>(false);
+
+  useEffect(() => {
+    const handleScrollCheck = () => {
+      const windowHeight = window.innerHeight || document.documentElement.clientHeight;
+
+      // Check Total Growth Chart
+      if (chartRef.current) {
+        const rect = chartRef.current.getBoundingClientRect();
+        const inView = rect.top < windowHeight * 0.92 && rect.bottom > windowHeight * 0.05;
+        setIsChartInView(inView);
+      }
+
+      // Check Bajaj Finery Chart
+      if (bajajChartRef.current) {
+        const rect = bajajChartRef.current.getBoundingClientRect();
+        const inView = rect.top < windowHeight * 0.95 && rect.bottom > windowHeight * 0.05;
+        setIsBajajInView(inView);
+      }
+    };
+
+    // Find scrollable parent (main element or window)
+    const scrollParent = chartRef.current?.closest('main') || window;
+    scrollParent.addEventListener('scroll', handleScrollCheck, { passive: true });
+    window.addEventListener('resize', handleScrollCheck, { passive: true });
+
+    // Initial check on mount
+    handleScrollCheck();
+
+    // Fallback IntersectionObserver
+    let observer: IntersectionObserver | null = null;
+    if ('IntersectionObserver' in window && chartRef.current) {
+      observer = new IntersectionObserver(
+        (entries) => {
+          entries.forEach(entry => {
+            if (entry.isIntersecting) {
+              setIsChartInView(true);
+            }
+          });
+        },
+        { threshold: 0.15 }
+      );
+      observer.observe(chartRef.current);
+    }
+
+    return () => {
+      scrollParent.removeEventListener('scroll', handleScrollCheck);
+      window.removeEventListener('resize', handleScrollCheck);
+      if (observer) observer.disconnect();
+    };
+  }, []);
 
   // Exact 12 monthly stacked bar data matching Berry Dashboard
   const monthlyData = [
@@ -197,7 +253,7 @@ export const BerryDashboardView: React.FC<BerryDashboardViewProps> = ({
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
         
         {/* TOTAL GROWTH BAR CHART (Span 8) */}
-        <div className="lg:col-span-8 bg-white border border-slate-100 p-5 sm:p-6 rounded-2xl shadow-xs flex flex-col justify-between">
+        <div ref={chartRef} className="lg:col-span-8 bg-white border border-slate-100 p-5 sm:p-6 rounded-2xl shadow-xs flex flex-col justify-between">
           
           {/* Header & Filter Controls */}
           <div className="flex items-center justify-between pb-4 border-b border-slate-100">
@@ -283,14 +339,14 @@ export const BerryDashboardView: React.FC<BerryDashboardViewProps> = ({
                       </motion.div>
                     )}
 
-                    {/* Stacked Bar rising up smoothly from bottom */}
+                    {/* Stacked Bar rising up smoothly from bottom when scrolled in view */}
                     <motion.div 
-                      key={`${growthFilter}-${idx}-${animCounter}`}
+                      key={`${growthFilter}-${idx}-${animCounter}-${isChartInView ? 'in' : 'out'}`}
                       initial={{ height: '0%', opacity: 0 }}
-                      animate={{ height: `${hPercent}%`, opacity: 1 }}
+                      animate={isChartInView ? { height: `${hPercent}%`, opacity: 1 } : { height: '0%', opacity: 0 }}
                       transition={{ 
-                        duration: 0.8, 
-                        delay: idx * 0.045, 
+                        duration: 0.85, 
+                        delay: isChartInView ? idx * 0.045 : 0, 
                         ease: [0.16, 1, 0.3, 1] 
                       }}
                       whileHover={{ scale: 1.05, transition: { duration: 0.15 } }}
@@ -348,7 +404,7 @@ export const BerryDashboardView: React.FC<BerryDashboardViewProps> = ({
             </div>
 
             {/* Featured Stock Card: Bajaj Finery */}
-            <div className="mt-4 p-4 rounded-xl bg-[#ede7f6] relative overflow-hidden">
+            <div ref={bajajChartRef} className="mt-4 p-4 rounded-xl bg-[#ede7f6] relative overflow-hidden">
               <div className="flex items-center justify-between relative z-10">
                 <div>
                   <h3 className="text-xs font-bold text-[#5e35b1]">Bajaj Finery</h3>
@@ -359,20 +415,22 @@ export const BerryDashboardView: React.FC<BerryDashboardViewProps> = ({
                 <span className="text-sm font-bold text-[#5e35b1]">$1839.00</span>
               </div>
 
-              {/* Smooth Purple Area Wave Chart with entrance animation */}
+              {/* Smooth Purple Area Wave Chart with scroll entrance animation */}
               <div className="mt-3 h-10 w-full relative z-10">
                 <svg className="w-full h-full overflow-visible" preserveAspectRatio="none" viewBox="0 0 100 30">
                   <motion.path
+                    key={`bajaj-fill-${isBajajInView}`}
                     initial={{ opacity: 0, scaleY: 0 }}
-                    animate={{ opacity: 1, scaleY: 1 }}
-                    transition={{ duration: 0.8, delay: 0.2 }}
+                    animate={isBajajInView ? { opacity: 1, scaleY: 1 } : { opacity: 0, scaleY: 0 }}
+                    transition={{ duration: 0.8, delay: 0.15 }}
                     style={{ transformOrigin: "bottom" }}
                     d="M 0,25 Q 25,5 50,20 T 100,10 L 100,30 L 0,30 Z"
                     fill="rgba(94, 53, 177, 0.2)"
                   />
                   <motion.path
+                    key={`bajaj-line-${isBajajInView}`}
                     initial={{ pathLength: 0, opacity: 0 }}
-                    animate={{ pathLength: 1, opacity: 1 }}
+                    animate={isBajajInView ? { pathLength: 1, opacity: 1 } : { pathLength: 0, opacity: 0 }}
                     transition={{ duration: 1.1, delay: 0.1, ease: "easeOut" }}
                     d="M 0,25 Q 25,5 50,20 T 100,10"
                     fill="none"
