@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   Search, 
   Download, 
@@ -7,46 +7,94 @@ import {
   ChevronRight, 
   MoreVertical, 
   ChevronLeft,
-  ArrowUp
+  ArrowUp,
+  RefreshCw
 } from 'lucide-react';
 import { ThemeConfig } from '../../types';
+import API from '../../services/api';
 
 interface OrderItemData {
   id: string;
+  mongoId: string;
   customerName: string;
   branch: string;
   paymentType: string;
   quantity: number;
+  totalPrice: number;
   orderDate: string;
   status: 'Pending' | 'Complete' | 'Cancel' | 'Hold';
 }
 
 const defaultOrderList: OrderItemData[] = [
-  { id: '#790955', customerName: 'Joseph William', branch: 'USA', paymentType: 'Card', quantity: 6, orderDate: '04 Sept 2026', status: 'Pending' },
-  { id: '#790956', customerName: 'Emma Watson', branch: 'Canada', paymentType: 'Card', quantity: 1, orderDate: '03 Sept 2026', status: 'Complete' },
-  { id: '#790957', customerName: 'Rahul Sharma', branch: 'India', paymentType: 'UPI', quantity: 2, orderDate: '02 Sept 2026', status: 'Pending' },
-  { id: '#790958', customerName: 'Oliver Smith', branch: 'UK', paymentType: 'COD', quantity: 1, orderDate: '01 Sept 2026', status: 'Cancel' },
-  { id: '#790959', customerName: 'Liam Brown', branch: 'Australia', paymentType: 'Card', quantity: 1, orderDate: '31 Aug 2026', status: 'Hold' },
-  { id: '#790960', customerName: 'Hans Muller', branch: 'USA', paymentType: 'UPI', quantity: 1, orderDate: '30 Aug 2026', status: 'Pending' },
-  { id: '#790961', customerName: 'Jean Dupont', branch: 'USA', paymentType: 'Card', quantity: 1, orderDate: '29 Aug 2026', status: 'Hold' },
-  { id: '#790962', customerName: 'Yuki Tanaka', branch: 'UK', paymentType: 'UPI', quantity: 2, orderDate: '28 Aug 2026', status: 'Pending' },
-  { id: '#790963', customerName: 'Ahmed Khan', branch: 'USA', paymentType: 'COD', quantity: 1, orderDate: '27 Aug 2026', status: 'Complete' },
-  { id: '#790964', customerName: 'Wei Lim', branch: 'UK', paymentType: 'Card', quantity: 2, orderDate: '26 Aug 2026', status: 'Pending' },
-  { id: '#790965', customerName: 'Lucas Silva', branch: 'Brazil', paymentType: 'Card', quantity: 3, orderDate: '25 Aug 2026', status: 'Complete' },
-  { id: '#790966', customerName: 'Chloe Dubois', branch: 'France', paymentType: 'Card', quantity: 1, orderDate: '24 Aug 2026', status: 'Hold' },
-  { id: '#790967', customerName: 'Alexander White', branch: 'USA', paymentType: 'COD', quantity: 4, orderDate: '23 Aug 2026', status: 'Complete' },
+  { id: '#790955', mongoId: '1', customerName: 'Joseph William', branch: 'Karachi', paymentType: 'Card', quantity: 6, totalPrice: 120, orderDate: '04 Sept 2026', status: 'Pending' },
+  { id: '#790956', mongoId: '2', customerName: 'Emma Watson', branch: 'Lahore', paymentType: 'Card', quantity: 1, totalPrice: 240, orderDate: '03 Sept 2026', status: 'Complete' },
 ];
 
 interface OrderListPageProps {
-  themeConfig: ThemeConfig;
+  themeConfig?: ThemeConfig;
 }
 
 export const OrderListPage: React.FC<OrderListPageProps> = () => {
-  const [orders, setOrders] = useState<OrderItemData[]>(defaultOrderList);
+  const [orders, setOrders] = useState<OrderItemData[]>([]);
+  const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [page, setPage] = useState(1);
   const [rowsPerPage, setRowsPerPage] = useState(10);
+
+  // Live orders fetch from MongoDB Atlas Backend
+  const fetchOrders = async () => {
+    setLoading(true);
+    try {
+      const res = await API.get('/orders');
+      if (res.data && Array.isArray(res.data)) {
+        const formattedOrders: OrderItemData[] = res.data.map((order: any) => {
+          const totalQty = order.orderItems?.reduce(
+            (acc: number, item: any) => acc + (item.qty || item.quantity || 1),
+            0
+          ) || 1;
+
+          const rawDate = order.createdAt ? new Date(order.createdAt) : new Date();
+          const formattedDate = rawDate.toLocaleDateString('en-GB', {
+            day: '2-digit',
+            month: 'short',
+            year: 'numeric'
+          });
+
+          // Order Status Mapping
+          let statusStr: OrderItemData['status'] = 'Pending';
+          if (order.isDelivered) {
+            statusStr = 'Complete';
+          } else if (order.status) {
+            statusStr = order.status;
+          }
+
+          return {
+            id: `#${order._id ? order._id.slice(-6).toUpperCase() : Math.floor(100000 + Math.random() * 900000)}`,
+            mongoId: order._id,
+            customerName: order.customerInfo?.name || order.user?.name || 'Guest Customer',
+            branch: order.shippingAddress?.city || 'Pakistan',
+            paymentType: order.paymentMethod === 'Cash on Delivery' ? 'COD' : order.paymentMethod || 'COD',
+            quantity: totalQty,
+            totalPrice: order.totalPrice || 0,
+            orderDate: formattedDate,
+            status: statusStr,
+          };
+        });
+
+        setOrders(formattedOrders);
+      }
+    } catch (err) {
+      console.warn('Could not load live orders, using fallback:', err);
+      setOrders(defaultOrderList);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchOrders();
+  }, []);
 
   const filteredOrders = orders.filter(order => 
     order.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -107,9 +155,9 @@ export const OrderListPage: React.FC<OrderListPageProps> = () => {
 
   return (
     <div className="p-4 sm:p-6 space-y-6 max-w-[1600px] mx-auto transition-all">
-      {/* Top Breadcrumb & Page Title (Exact Berry style from Image 8) */}
+      {/* Top Breadcrumb & Page Title */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-        <h1 className="text-xl font-bold text-slate-800">List</h1>
+        <h1 className="text-xl font-bold text-slate-800">Live Orders ({orders.length})</h1>
 
         <div className="flex items-center gap-1.5 text-xs text-slate-500 font-medium">
           <Home className="w-3.5 h-3.5 text-[#5e35b1]" />
@@ -120,29 +168,39 @@ export const OrderListPage: React.FC<OrderListPageProps> = () => {
         </div>
       </div>
 
-      {/* Main White Table Card (Exact Berry Order List styling) */}
+      {/* Main White Table Card */}
       <div className="bg-white rounded-2xl border border-slate-100 shadow-xs overflow-hidden">
-        {/* Top Control Bar: Search on Left, Download & Add New on Right */}
+        {/* Top Control Bar */}
         <div className="p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100">
           <div className="relative w-full sm:w-72">
             <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
             <input
               type="text"
-              placeholder="Search"
+              placeholder="Search Orders or Customers..."
               value={searchQuery}
               onChange={(e) => { setSearchQuery(e.target.value); setPage(1); }}
-              className="w-full pl-9 pr-4 py-2 text-xs bg-white border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 text-slate-700 placeholder-slate-400"
+              className="w-full pl-9 pr-4 py-2 text-xs bg-white border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 text-slate-700 placeholder-slate-400"
             />
           </div>
 
           <div className="flex items-center gap-2.5 self-end sm:self-auto">
+            {/* Refresh Button */}
+            <button
+              onClick={fetchOrders}
+              className="px-3 py-2 rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-50 text-xs font-semibold flex items-center gap-1.5 transition-all shadow-xs"
+              title="Refresh Orders"
+            >
+              <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
+              <span>Refresh</span>
+            </button>
+
             {/* Download Button */}
             <button
               onClick={() => {
                 const jsonString = `data:text/json;charset=utf-8,${encodeURIComponent(JSON.stringify(orders, null, 2))}`;
                 const downloadAnchor = document.createElement('a');
                 downloadAnchor.setAttribute('href', jsonString);
-                downloadAnchor.setAttribute('download', 'berry_orders.json');
+                downloadAnchor.setAttribute('download', 'live_orders.json');
                 document.body.appendChild(downloadAnchor);
                 downloadAnchor.click();
                 downloadAnchor.remove();
@@ -151,27 +209,6 @@ export const OrderListPage: React.FC<OrderListPageProps> = () => {
             >
               <Download className="w-3.5 h-3.5" />
               <span>Download</span>
-            </button>
-
-            {/* Add New Button */}
-            <button
-              onClick={() => {
-                const newId = `#7909${Math.floor(65 + Math.random() * 30)}`;
-                const newOrder: OrderItemData = {
-                  id: newId,
-                  customerName: 'New Customer',
-                  branch: 'USA',
-                  paymentType: 'Card',
-                  quantity: 1,
-                  orderDate: '05 Sept 2026',
-                  status: 'Pending'
-                };
-                setOrders([newOrder, ...orders]);
-              }}
-              className="px-3.5 py-2 rounded-xl bg-[#1e88e5] hover:bg-[#1565c0] text-white text-xs font-semibold flex items-center gap-1.5 transition-all shadow-xs"
-            >
-              <Plus className="w-3.5 h-3.5" />
-              <span>Add New</span>
             </button>
           </div>
         </div>
@@ -191,21 +228,30 @@ export const OrderListPage: React.FC<OrderListPageProps> = () => {
                 </th>
                 <th className="py-3.5 px-4">
                   <div className="flex items-center gap-1 cursor-pointer hover:text-slate-800">
-                    <span>ID</span>
+                    <span>Order ID</span>
                     <ArrowUp className="w-3 h-3 text-slate-400" />
                   </div>
                 </th>
                 <th className="py-3.5 px-4">Customer Name</th>
-                <th className="py-3.5 px-4">Branch</th>
-                <th className="py-3.5 px-4">Payment Type</th>
-                <th className="py-3.5 px-4 text-center">Quantity</th>
+                <th className="py-3.5 px-4">City / Branch</th>
+                <th className="py-3.5 px-4">Payment</th>
+                <th className="py-3.5 px-4 text-center">Items</th>
+                <th className="py-3.5 px-4 text-center">Total Price</th>
                 <th className="py-3.5 px-4">Order Date</th>
                 <th className="py-3.5 px-4">Status</th>
                 <th className="py-3.5 px-4 text-center">Action</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 text-xs">
-              {paginatedOrders.map((order) => {
+              {loading && (
+                <tr>
+                  <td colSpan={10} className="text-center py-10 text-slate-500">
+                    Loading live orders from database...
+                  </td>
+                </tr>
+              )}
+
+              {!loading && paginatedOrders.map((order) => {
                 const isSelected = selectedIds.includes(order.id);
                 return (
                   <tr 
@@ -220,7 +266,7 @@ export const OrderListPage: React.FC<OrderListPageProps> = () => {
                         className="w-4 h-4 rounded border-slate-300 text-purple-600 focus:ring-purple-500 cursor-pointer"
                       />
                     </td>
-                    <td className="py-3.5 px-4 font-semibold text-slate-800">
+                    <td className="py-3.5 px-4 font-mono font-semibold text-purple-700">
                       {order.id}
                     </td>
                     <td className="py-3.5 px-4 font-medium text-slate-800">
@@ -229,11 +275,14 @@ export const OrderListPage: React.FC<OrderListPageProps> = () => {
                     <td className="py-3.5 px-4 text-slate-600">
                       {order.branch}
                     </td>
-                    <td className="py-3.5 px-4 text-slate-600">
+                    <td className="py-3.5 px-4 text-slate-600 font-medium">
                       {order.paymentType}
                     </td>
                     <td className="py-3.5 px-4 text-center font-medium text-slate-700">
                       {order.quantity}
+                    </td>
+                    <td className="py-3.5 px-4 text-center font-bold text-slate-900">
+                      ${order.totalPrice}
                     </td>
                     <td className="py-3.5 px-4 text-slate-500">
                       {order.orderDate}
@@ -250,10 +299,10 @@ export const OrderListPage: React.FC<OrderListPageProps> = () => {
                 );
               })}
 
-              {paginatedOrders.length === 0 && (
+              {!loading && paginatedOrders.length === 0 && (
                 <tr>
-                  <td colSpan={9} className="text-center py-10 text-slate-400">
-                    No orders matching your search.
+                  <td colSpan={10} className="text-center py-10 text-slate-400">
+                    No live orders found in database.
                   </td>
                 </tr>
               )}
@@ -261,7 +310,7 @@ export const OrderListPage: React.FC<OrderListPageProps> = () => {
           </table>
         </div>
 
-        {/* Pagination Row (Exact Berry styling from Image 8) */}
+        {/* Pagination Row */}
         <div className="p-4 border-t border-slate-100 flex flex-col sm:flex-row items-center justify-end gap-6 text-xs text-slate-600">
           <div className="flex items-center gap-2">
             <span>Rows per page:</span>
@@ -300,17 +349,6 @@ export const OrderListPage: React.FC<OrderListPageProps> = () => {
           </div>
         </div>
       </div>
-
-      {/* CodedThemes Footer (Exact Berry style from Image 8 & 9) */}
-      <footer className="pt-6 pb-2 text-xs text-slate-500 flex flex-col sm:flex-row items-center justify-between gap-3">
-        <p>© All rights reserved <span className="text-[#5e35b1] font-semibold cursor-pointer">CodedThemes</span></p>
-        <div className="flex items-center gap-4 sm:gap-6">
-          <a href="#" className="hover:text-slate-800 transition-colors">License</a>
-          <a href="#" className="hover:text-slate-800 transition-colors">Hire us</a>
-          <a href="#" className="hover:text-slate-800 transition-colors">Terms</a>
-          <a href="#" className="hover:text-slate-800 transition-colors">Figma Design System</a>
-        </div>
-      </footer>
     </div>
   );
 };
