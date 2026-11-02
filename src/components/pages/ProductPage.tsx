@@ -71,9 +71,14 @@ interface ProductPageProps {
   initialViewMode?: 'list' | 'details';
 }
 
-ing, setSubmitting] = useState(false);
-
-  // New product form state
+export const ProductPage: React.FC<ProductPageProps> = ({ initialViewMode = 'list' }) => {
+  const [viewMode, setViewMode] = useState<'list' | 'details'>(initialViewMode);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedCategory, setSelectedCategory] = useState('All');
+  const [selectedProductId, setSelectedProductId] = useState<string | null>(null);
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
+  const [submitting, setSubmitting] = useState(false);
   const [newProduct, setNewProduct] = useState({
     name: '',
     category: 'T-Shirts',
@@ -84,7 +89,7 @@ ing, setSubmitting] = useState(false);
     image: 'https://images.unsplash.com/photo-1521572267360-ee0c2909d518?w=800&auto=format&fit=crop&q=80',
     description: '',
   });
-export const ProductPage: React.FC<ProductPageProps> = () => {
+
   const [products, setProducts] = useState<ProductItem[]>([]); // 👈 Start with []
   const [loading, setLoading] = useState<boolean>(true);
 

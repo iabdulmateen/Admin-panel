@@ -38,6 +38,10 @@ interface OrderListPageProps {
 export const OrderListPage: React.FC<OrderListPageProps> = () => {
   const [orders, setOrders] = useState<OrderItemData[]>([]); // 👈 Start with []
   const [loading, setLoading] = useState(true);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [page, setPage] = useState(1);
+  const [rowsPerPage, setRowsPerPage] = useState(10);
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
 
   // 2. Fetch Orders from MongoDB Atlas
   const fetchOrders = async () => {
@@ -80,8 +84,6 @@ export const OrderListPage: React.FC<OrderListPageProps> = () => {
       setOrders([]); // 👈 Never show dummy data
     } finally {
       setLoading(false);
-    }
-  };
     }
   };
 
