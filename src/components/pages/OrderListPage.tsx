@@ -61,16 +61,8 @@ export const OrderListPage: React.FC<OrderListPageProps> = () => {
             year: 'numeric'
           });
 
-          // Order Status Mapping
-          let statusStr: OrderItemData['status'] = 'Pending';
-          if (order.isDelivered) {
-            statusStr = 'Complete';
-          } else if (order.status) {
-            statusStr = order.status;
-          }
-
           return {
-            id: `#${order._id ? order._id.slice(-6).toUpperCase() : Math.floor(100000 + Math.random() * 900000)}`,
+            id: `#${order._id ? order._id.slice(-6).toUpperCase() : 'ORDER'}`,
             mongoId: order._id,
             customerName: order.customerInfo?.name || order.user?.name || 'Guest Customer',
             branch: order.shippingAddress?.city || 'Pakistan',
@@ -78,15 +70,17 @@ export const OrderListPage: React.FC<OrderListPageProps> = () => {
             quantity: totalQty,
             totalPrice: order.totalPrice || 0,
             orderDate: formattedDate,
-            status: statusStr,
+            status: order.isDelivered ? 'Complete' : (order.status || 'Pending'),
           };
         });
 
-        setOrders(formattedOrders);
+        setOrders(formattedOrders); // 👈 Direct MongoDB Orders
+      } else {
+        setOrders([]);
       }
     } catch (err) {
-      console.warn('Could not load live orders, using fallback:', err);
-      setOrders(defaultOrderList);
+      console.warn('Could not load live orders:', err);
+      setOrders([]); // 👈 Live MongoDB orders na hone par 0 orders dikhayega
     } finally {
       setLoading(false);
     }

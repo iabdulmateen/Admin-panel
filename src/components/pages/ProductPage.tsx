@@ -101,60 +101,38 @@ export const ProductPage: React.FC<ProductPageProps> = () => {
     setLoading(true);
     try {
       const res = await API.get('/products');
-      if (res.data && Array.isArray(res.data) && res.data.length > 0) {
-        const formatted: ProductItem[] = res.data.map((p: any) => {
-          const pId = p._id || p.id;
-          const pImg = p.imageUrl || p.image || 'https://images.unsplash.com/photo-1521572267360-ee0c2909d518?w=800&auto=format&fit=crop&q=80';
-          const pStock = p.stock !== undefined ? p.stock : 25;
-          const priceNum = Number(p.price) || 0;
-          const origPrice = p.oldPrice ? Number(p.oldPrice) : priceNum > 0 ? priceNum * 1.2 : 150;
+      if (res.data && Array.isArray(res.data)) {
+        const formatted: ProductItem[] = res.data.map((p: any) => ({
+          id: p._id || p.id,
+          name: p.name || 'Untitled Product',
+          category: p.category || 'General',
+          brand: p.brand || 'Shop-co',
+          sku: `SKU-${String(p._id || p.id).slice(-6).toUpperCase()}`,
+          price: Number(p.price) || 0,
+          originalPrice: p.oldPrice ? Number(p.oldPrice) : Number(p.price) || 0,
+          rating: p.rating || 4.5,
+          reviewsCount: 18,
+          stock: p.stock !== undefined ? p.stock : 25,
+          status: (p.stock || 25) > 10 ? 'In Stock' : 'Low Stock',
+          image: p.imageUrl || p.image || '',
+          gallery: [p.imageUrl || p.image || ''],
+          description: p.description || '',
+          features: ['Soft & breathable material'],
+          specifications: [{ label: 'Brand', value: p.brand || 'Shop-co' }],
+          colors: [{ name: 'Black', hex: '#18181b' }]
+        }));
 
-          return {
-            id: pId,
-            name: p.name || 'Untitled Product',
-            category: p.category || 'General',
-            brand: p.brand || 'Shop-co',
-            sku: `SKU-${String(pId).slice(-6).toUpperCase()}`,
-            price: priceNum,
-            originalPrice: origPrice,
-            rating: p.rating || 4.5,
-            reviewsCount: 18,
-            stock: pStock,
-            status: pStock > 10 ? 'In Stock' : pStock > 0 ? 'Low Stock' : 'Out of Stock',
-            image: pImg,
-            gallery: [pImg],
-            description: p.description || 'High-quality cotton fabric with comfortable fit.',
-            features: [
-              'Soft & breathable material',
-              'Durable stitching & premium feel',
-              'Easy machine wash'
-            ],
-            specifications: [
-              { label: 'Brand', value: p.brand || 'Shop-co' },
-              { label: 'Category', value: p.category || 'General' },
-              { label: 'Condition', value: 'Brand New' }
-            ],
-            colors: [
-              { name: 'Black', hex: '#18181b' },
-              { name: 'Navy Blue', hex: '#1e3a8a' }
-            ]
-          };
-        });
-
-        setProducts(formatted);
-        if (!selectedProductId && formatted.length > 0) {
-          setSelectedProductId(formatted[0].id);
-        }
+        setProducts(formatted); // 👈 Direct MongoDB Products
+      } else {
+        setProducts([]);
       }
     } catch (err) {
-      console.warn('Backend unavailable, using fallback products:', err);
-      setProducts(fallbackProducts);
-      if (!selectedProductId) setSelectedProductId(fallbackProducts[0].id);
+      console.warn('Could not load products:', err);
+      setProducts([]); // 👈 Clear empty array
     } finally {
       setLoading(false);
     }
   };
-
   useEffect(() => {
     fetchProducts();
   }, []);
