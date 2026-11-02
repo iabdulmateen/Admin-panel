@@ -34,15 +34,12 @@ interface OrderListPageProps {
   themeConfig?: ThemeConfig;
 }
 
+// 1. Initial State me Khali Array [] rakhein
 export const OrderListPage: React.FC<OrderListPageProps> = () => {
-  const [orders, setOrders] = useState<OrderItemData[]>([]);
+  const [orders, setOrders] = useState<OrderItemData[]>([]); // 👈 Start with []
   const [loading, setLoading] = useState(true);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [selectedIds, setSelectedIds] = useState<string[]>([]);
-  const [page, setPage] = useState(1);
-  const [rowsPerPage, setRowsPerPage] = useState(10);
 
-  // Live orders fetch from MongoDB Atlas Backend
+  // 2. Fetch Orders from MongoDB Atlas
   const fetchOrders = async () => {
     setLoading(true);
     try {
@@ -74,15 +71,17 @@ export const OrderListPage: React.FC<OrderListPageProps> = () => {
           };
         });
 
-        setOrders(formattedOrders); // 👈 Direct MongoDB Orders
+        setOrders(formattedOrders); // 👈 Direct Real Orders
       } else {
         setOrders([]);
       }
     } catch (err) {
-      console.warn('Could not load live orders:', err);
-      setOrders([]); // 👈 Live MongoDB orders na hone par 0 orders dikhayega
+      console.warn('Could not load orders:', err);
+      setOrders([]); // 👈 Never show dummy data
     } finally {
       setLoading(false);
+    }
+  };
     }
   };
 

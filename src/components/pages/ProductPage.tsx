@@ -71,18 +71,7 @@ interface ProductPageProps {
   initialViewMode?: 'list' | 'details';
 }
 
-export const ProductPage: React.FC<ProductPageProps> = () => {
-  const [products, setProducts] = useState<ProductItem[]>([]);
-  const [loading, setLoading] = useState<boolean>(true);
-  const [selectedProductId, setSelectedProductId] = useState<string>('');
-  const [viewMode, setViewMode] = useState<'list' | 'details'>('list');
-  const [searchQuery, setSearchQuery] = useState('');
-  const [selectedCategory, setSelectedCategory] = useState<string>('All');
-  
-  // Modals state
-  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
-  const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
-  const [submitting, setSubmitting] = useState(false);
+ing, setSubmitting] = useState(false);
 
   // New product form state
   const [newProduct, setNewProduct] = useState({
@@ -95,40 +84,49 @@ export const ProductPage: React.FC<ProductPageProps> = () => {
     image: 'https://images.unsplash.com/photo-1521572267360-ee0c2909d518?w=800&auto=format&fit=crop&q=80',
     description: '',
   });
+export const ProductPage: React.FC<ProductPageProps> = () => {
+  const [products, setProducts] = useState<ProductItem[]>([]); // 👈 Start with []
+  const [loading, setLoading] = useState<boolean>(true);
 
-  // Fetch live products from backend
   const fetchProducts = async () => {
     setLoading(true);
     try {
       const res = await API.get('/products');
       if (res.data && Array.isArray(res.data)) {
-        const formatted: ProductItem[] = res.data.map((p: any) => ({
-          id: p._id || p.id,
-          name: p.name || 'Untitled Product',
-          category: p.category || 'General',
-          brand: p.brand || 'Shop-co',
-          sku: `SKU-${String(p._id || p.id).slice(-6).toUpperCase()}`,
-          price: Number(p.price) || 0,
-          originalPrice: p.oldPrice ? Number(p.oldPrice) : Number(p.price) || 0,
-          rating: p.rating || 4.5,
-          reviewsCount: 18,
-          stock: p.stock !== undefined ? p.stock : 25,
-          status: (p.stock || 25) > 10 ? 'In Stock' : 'Low Stock',
-          image: p.imageUrl || p.image || '',
-          gallery: [p.imageUrl || p.image || ''],
-          description: p.description || '',
-          features: ['Soft & breathable material'],
-          specifications: [{ label: 'Brand', value: p.brand || 'Shop-co' }],
-          colors: [{ name: 'Black', hex: '#18181b' }]
-        }));
+        const formatted: ProductItem[] = res.data.map((p: any) => {
+          const pId = p._id || p.id;
+          const pImg = p.imageUrl || p.image || '';
+          const pStock = p.stock !== undefined ? p.stock : 25;
+          const priceNum = Number(p.price) || 0;
 
-        setProducts(formatted); // 👈 Direct MongoDB Products
+          return {
+            id: pId,
+            name: p.name || 'Untitled Product',
+            category: p.category || 'General',
+            brand: p.brand || 'Shop-co',
+            sku: `SKU-${String(pId).slice(-6).toUpperCase()}`,
+            price: priceNum,
+            originalPrice: p.oldPrice ? Number(p.oldPrice) : priceNum,
+            rating: p.rating || 4.5,
+            reviewsCount: 18,
+            stock: pStock,
+            status: pStock > 10 ? 'In Stock' : 'Low Stock',
+            image: pImg,
+            gallery: [pImg],
+            description: p.description || '',
+            features: ['Soft & breathable material'],
+            specifications: [{ label: 'Brand', value: p.brand || 'Shop-co' }],
+            colors: [{ name: 'Black', hex: '#18181b' }]
+          };
+        });
+
+        setProducts(formatted); // 👈 Direct Real Database Products
       } else {
         setProducts([]);
       }
     } catch (err) {
       console.warn('Could not load products:', err);
-      setProducts([]); // 👈 Clear empty array
+      setProducts([]); // 👈 Never show dummy electronics
     } finally {
       setLoading(false);
     }
