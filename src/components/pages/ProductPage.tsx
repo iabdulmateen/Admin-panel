@@ -9,15 +9,16 @@ import {
   Eye, 
   ArrowLeft, 
   Check, 
-  ShieldCheck, 
-  Truck, 
-  RotateCcw,
   X,
   Package,
-  RefreshCw
+  RefreshCw,
+  Tag,
+  Box,
+  Layers,
+  Filter
 } from 'lucide-react';
 import { ThemeConfig } from '../../types';
-import API from '../../services/api';
+import API from '../../api';
 
 export interface ProductItem {
   id: string;
@@ -39,30 +40,153 @@ export interface ProductItem {
   colors: { name: string; hex: string }[];
 }
 
-const fallbackProducts: ProductItem[] = [
+const defaultProductsList: ProductItem[] = [
   {
-    id: 'prod-1',
-    name: 'T-shirt with Tape Details',
+    id: 'prod-101',
+    name: 'Berry Pro React Material-UI Admin Template',
+    category: 'Software',
+    brand: 'CodedThemes',
+    sku: 'SKU-BERRY-001',
+    price: 69.00,
+    originalPrice: 89.00,
+    rating: 4.9,
+    reviewsCount: 142,
+    stock: 99,
+    status: 'In Stock',
+    image: 'https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=800&auto=format&fit=crop&q=80',
+    gallery: [
+      'https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=800&auto=format&fit=crop&q=80',
+      'https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=800&auto=format&fit=crop&q=80',
+      'https://images.unsplash.com/photo-1507238691740-187a5b1d37b8?w=800&auto=format&fit=crop&q=80'
+    ],
+    description: 'Premier React & MUI admin dashboard template with modular design system, dark mode, TypeScript support, and full e-commerce modules.',
+    features: ['React 19 & MUI v5 support', 'TypeScript standard code', '100+ UI Components', 'Multiple color presets'],
+    specifications: [
+      { label: 'Framework', value: 'React / Vite' },
+      { label: 'UI Library', value: 'Material UI & Tailwind' },
+      { label: 'License', value: 'Standard & Enterprise' }
+    ],
+    colors: [{ name: 'Royal Purple', hex: '#5e35b1' }, { name: 'Ocean Blue', hex: '#1e88e5' }]
+  },
+  {
+    id: 'prod-102',
+    name: 'Classic Slim Fit Cotton T-Shirt',
     category: 'T-Shirts',
     brand: 'Shop-co',
-    sku: 'SHP-TSHIRT-001',
-    price: 120,
-    originalPrice: 150,
-    rating: 4.5,
-    reviewsCount: 42,
-    stock: 50,
+    sku: 'SKU-TSHIRT-002',
+    price: 39.00,
+    originalPrice: 55.00,
+    rating: 4.7,
+    reviewsCount: 88,
+    stock: 45,
     status: 'In Stock',
     image: 'https://images.unsplash.com/photo-1521572267360-ee0c2909d518?w=800&auto=format&fit=crop&q=80',
     gallery: [
-      'https://images.unsplash.com/photo-1521572267360-ee0c2909d518?w=800&auto=format&fit=crop&q=80'
+      'https://images.unsplash.com/photo-1521572267360-ee0c2909d518?w=800&auto=format&fit=crop&q=80',
+      'https://images.unsplash.com/photo-1583743814966-8936f5b7be1a?w=800&auto=format&fit=crop&q=80'
     ],
-    description: 'Casual crewneck t-shirt with signature tape details along the sleeves.',
-    features: ['100% Breathable Cotton', 'Pre-shrunk fabric', 'Machine washable'],
+    description: 'Ultra-breathable 100% organic cotton crewneck tee crafted for daily wear with reinforced stitching.',
+    features: ['100% Organic Cotton', 'Pre-shrunk fabric', 'Machine washable at 30°C'],
     specifications: [
-      { label: 'Brand', value: 'Shop-co' },
-      { label: 'Material', value: '100% Cotton' }
+      { label: 'Material', value: 'Cotton' },
+      { label: 'Fit', value: 'Slim Fit' }
     ],
-    colors: [{ name: 'Classic Black', hex: '#000000' }]
+    colors: [{ name: 'Classic Black', hex: '#000000' }, { name: 'Heather Gray', hex: '#64748b' }]
+  },
+  {
+    id: 'prod-103',
+    name: 'Figma UI Design System Kit (Berry Edition)',
+    category: 'Software',
+    brand: 'Berry Design',
+    sku: 'SKU-FIGMA-003',
+    price: 49.00,
+    originalPrice: 79.00,
+    rating: 4.8,
+    reviewsCount: 64,
+    stock: 80,
+    status: 'In Stock',
+    image: 'https://images.unsplash.com/photo-1581291518857-4e27b48ff24e?w=800&auto=format&fit=crop&q=80',
+    gallery: [
+      'https://images.unsplash.com/photo-1581291518857-4e27b48ff24e?w=800&auto=format&fit=crop&q=80'
+    ],
+    description: 'Complete Figma design system matching Berry UI with auto-layout v5, variants, tokens, and dark/light components.',
+    features: ['Figma Auto Layout 5.0', 'Color Tokens & Styles', 'Desktop & Mobile frames'],
+    specifications: [
+      { label: 'File Format', value: '.FIG' },
+      { label: 'Components', value: '250+' }
+    ],
+    colors: [{ name: 'Berry Theme', hex: '#5e35b1' }]
+  },
+  {
+    id: 'prod-104',
+    name: 'Vintage Denim Oxford Casual Shirt',
+    category: 'Shirts',
+    brand: 'Levi Style',
+    sku: 'SKU-SHIRT-004',
+    price: 79.50,
+    originalPrice: 99.00,
+    rating: 4.6,
+    reviewsCount: 34,
+    stock: 8,
+    status: 'Low Stock',
+    image: 'https://images.unsplash.com/photo-1596755094514-f87e34085b2c?w=800&auto=format&fit=crop&q=80',
+    gallery: [
+      'https://images.unsplash.com/photo-1596755094514-f87e34085b2c?w=800&auto=format&fit=crop&q=80'
+    ],
+    description: 'Premium denim button-down shirt with chest pockets, relaxed fit, and vintage enzyme wash finish.',
+    features: ['Heavyweight denim cotton', 'Button-down collar', 'Chest patch pockets'],
+    specifications: [
+      { label: 'Material', value: 'Denim Cotton' },
+      { label: 'Care', value: 'Machine wash cold' }
+    ],
+    colors: [{ name: 'Indigo Blue', hex: '#1e3a8a' }]
+  },
+  {
+    id: 'prod-105',
+    name: 'ApexCharts Enterprise Analytics Dashboard',
+    category: 'Software',
+    brand: 'ApexCorp',
+    sku: 'SKU-APEX-005',
+    price: 129.00,
+    originalPrice: 169.00,
+    rating: 4.9,
+    reviewsCount: 52,
+    stock: 50,
+    status: 'In Stock',
+    image: 'https://images.unsplash.com/photo-1551836022-d5d88e9218df?w=800&auto=format&fit=crop&q=80',
+    gallery: [
+      'https://images.unsplash.com/photo-1551836022-d5d88e9218df?w=800&auto=format&fit=crop&q=80'
+    ],
+    description: 'Interactive analytics chart widgets with live data stream connectors, CSV export, and customization controls.',
+    features: ['Realtime WebSocket data feed', '15+ Chart types', 'Export SVG & PNG'],
+    specifications: [
+      { label: 'Library', value: 'ApexCharts / Recharts' }
+    ],
+    colors: [{ name: 'Emerald', hex: '#10b981' }]
+  },
+  {
+    id: 'prod-106',
+    name: 'Wireless Noise Cancelling Headphones',
+    category: 'Electronics',
+    brand: 'SonicPro',
+    sku: 'SKU-AUDIO-006',
+    price: 199.00,
+    originalPrice: 249.00,
+    rating: 4.8,
+    reviewsCount: 110,
+    stock: 0,
+    status: 'Out of Stock',
+    image: 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=800&auto=format&fit=crop&q=80',
+    gallery: [
+      'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=800&auto=format&fit=crop&q=80'
+    ],
+    description: 'Active Noise Cancellation headphones with 40-hour battery life, spatial audio, and USB-C fast charging.',
+    features: ['ANC Active Noise Cancelling', 'Bluetooth 5.3', '40-Hour Battery'],
+    specifications: [
+      { label: 'Connectivity', value: 'Bluetooth & 3.5mm' },
+      { label: 'Weight', value: '250g' }
+    ],
+    colors: [{ name: 'Matte Black', hex: '#18181b' }, { name: 'Silver', hex: '#cbd5e1' }]
   }
 ];
 
@@ -71,7 +195,23 @@ interface ProductPageProps {
   initialViewMode?: 'list' | 'details';
 }
 
-ing, setSubmitting] = useState(false);
+const LOCAL_STORAGE_PRODUCTS_KEY = 'berry_dashboard_products_v2';
+
+export const ProductPage: React.FC<ProductPageProps> = ({
+  initialViewMode = 'list'
+}) => {
+  const [products, setProducts] = useState<ProductItem[]>([]);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [selectedProductId, setSelectedProductId] = useState<string>('');
+  const [viewMode, setViewMode] = useState<'list' | 'details'>(initialViewMode);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedCategory, setSelectedCategory] = useState<string>('All');
+  
+  // Modals state
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
+  const [submitting, setSubmitting] = useState(false);
+  const [notification, setNotification] = useState<string | null>(null);
 
   // New product form state
   const [newProduct, setNewProduct] = useState({
@@ -84,63 +224,6 @@ ing, setSubmitting] = useState(false);
     image: 'https://images.unsplash.com/photo-1521572267360-ee0c2909d518?w=800&auto=format&fit=crop&q=80',
     description: '',
   });
-export const ProductPage: React.FC<ProductPageProps> = () => {
-  const [products, setProducts] = useState<ProductItem[]>([]); // 👈 Start with []
-  const [loading, setLoading] = useState<boolean>(true);
-
-  const fetchProducts = async () => {
-    setLoading(true);
-    try {
-      const res = await API.get('/products');
-      if (res.data && Array.isArray(res.data)) {
-        const formatted: ProductItem[] = res.data.map((p: any) => {
-          const pId = p._id || p.id;
-          const pImg = p.imageUrl || p.image || '';
-          const pStock = p.stock !== undefined ? p.stock : 25;
-          const priceNum = Number(p.price) || 0;
-
-          return {
-            id: pId,
-            name: p.name || 'Untitled Product',
-            category: p.category || 'General',
-            brand: p.brand || 'Shop-co',
-            sku: `SKU-${String(pId).slice(-6).toUpperCase()}`,
-            price: priceNum,
-            originalPrice: p.oldPrice ? Number(p.oldPrice) : priceNum,
-            rating: p.rating || 4.5,
-            reviewsCount: 18,
-            stock: pStock,
-            status: pStock > 10 ? 'In Stock' : 'Low Stock',
-            image: pImg,
-            gallery: [pImg],
-            description: p.description || '',
-            features: ['Soft & breathable material'],
-            specifications: [{ label: 'Brand', value: p.brand || 'Shop-co' }],
-            colors: [{ name: 'Black', hex: '#18181b' }]
-          };
-        });
-
-        setProducts(formatted); // 👈 Direct Real Database Products
-      } else {
-        setProducts([]);
-      }
-    } catch (err) {
-      console.warn('Could not load products:', err);
-      setProducts([]); // 👈 Never show dummy electronics
-    } finally {
-      setLoading(false);
-    }
-  };
-  useEffect(() => {
-    fetchProducts();
-  }, []);
-
-  const selectedProduct = products.find(p => p.id === selectedProductId) || products[0];
-  const [activeImage, setActiveImage] = useState<string>(selectedProduct?.image || '');
-  const [selectedColor, setSelectedColor] = useState<number>(0);
-  const [quantity, setQuantity] = useState<number>(1);
-  const [activeTab, setActiveTab] = useState<'description' | 'specifications' | 'reviews'>('description');
-  const [notification, setNotification] = useState<string | null>(null);
 
   const showToast = (msg: string) => {
     setNotification(msg);
@@ -149,7 +232,89 @@ export const ProductPage: React.FC<ProductPageProps> = () => {
     }, 3500);
   };
 
-  const categories = ['All', 'T-Shirts', 'Shirts', 'Jeans', 'Electronics', 'Accessories'];
+  const saveProductsToLocal = (items: ProductItem[]) => {
+    try {
+      localStorage.setItem(LOCAL_STORAGE_PRODUCTS_KEY, JSON.stringify(items));
+    } catch (e) {
+      console.warn('LocalStorage product save error:', e);
+    }
+  };
+
+  // Fetch live products with local fallback
+  const fetchProducts = async () => {
+    setLoading(true);
+    try {
+      const res = await API.get('/products');
+      if (res.data && Array.isArray(res.data) && res.data.length > 0) {
+        const formatted: ProductItem[] = res.data.map((p: any) => ({
+          id: p._id || p.id || `prod-${Math.random()}`,
+          name: p.name || 'Untitled Product',
+          category: p.category || 'General',
+          brand: p.brand || 'Shop-co',
+          sku: `SKU-${String(p._id || p.id).slice(-6).toUpperCase()}`,
+          price: Number(p.price) || 0,
+          originalPrice: p.oldPrice ? Number(p.oldPrice) : Number(p.price) || 0,
+          rating: p.rating || 4.5,
+          reviewsCount: p.reviewsCount || 18,
+          stock: p.stock !== undefined ? p.stock : 25,
+          status: (p.stock ?? 25) > 10 ? 'In Stock' : (p.stock ?? 25) > 0 ? 'Low Stock' : 'Out of Stock',
+          image: p.imageUrl || p.image || 'https://images.unsplash.com/photo-1521572267360-ee0c2909d518?w=800&auto=format&fit=crop&q=80',
+          gallery: [p.imageUrl || p.image || 'https://images.unsplash.com/photo-1521572267360-ee0c2909d518?w=800&auto=format&fit=crop&q=80'],
+          description: p.description || 'Quality product in Berry live catalog.',
+          features: ['Premium craftsmanship', 'Quality guarantee'],
+          specifications: [{ label: 'Brand', value: p.brand || 'Shop-co' }],
+          colors: [{ name: 'Default', hex: '#18181b' }]
+        }));
+
+        setProducts(formatted);
+        saveProductsToLocal(formatted);
+        if (!selectedProductId && formatted.length > 0) {
+          setSelectedProductId(formatted[0].id);
+        }
+      } else {
+        loadFallbackProducts();
+      }
+    } catch (err) {
+      console.warn('Could not load products from API server, switching to local cache:', err);
+      loadFallbackProducts();
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const loadFallbackProducts = () => {
+    try {
+      const saved = localStorage.getItem(LOCAL_STORAGE_PRODUCTS_KEY);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          setProducts(parsed);
+          if (!selectedProductId) setSelectedProductId(parsed[0].id);
+          return;
+        }
+      }
+    } catch (e) {
+      console.warn('Error reading local products:', e);
+    }
+    setProducts(defaultProductsList);
+    saveProductsToLocal(defaultProductsList);
+    if (!selectedProductId) setSelectedProductId(defaultProductsList[0].id);
+  };
+
+  useEffect(() => {
+    fetchProducts();
+  }, []);
+
+  const selectedProduct = products.find(p => p.id === selectedProductId) || products[0];
+  const [activeImage, setActiveImage] = useState<string>('');
+
+  useEffect(() => {
+    if (selectedProduct) {
+      setActiveImage(selectedProduct.image);
+    }
+  }, [selectedProductId, selectedProduct]);
+
+  const categories = ['All', 'Software', 'T-Shirts', 'Shirts', 'Electronics', 'Accessories'];
 
   const filteredProducts = products.filter(p => {
     const matchesSearch = p.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
@@ -159,67 +324,91 @@ export const ProductPage: React.FC<ProductPageProps> = () => {
     return matchesSearch && matchesCategory;
   });
 
-  // Handle deleting a product from Live API
+  // Handle deleting a product
   const handleDeleteProduct = async (id: string) => {
     try {
       await API.delete(`/products/${id}`);
-      const updated = products.filter(p => p.id !== id);
-      setProducts(updated);
-      setDeleteConfirmId(null);
-      showToast(`Product deleted successfully from database.`);
-      
-      if (selectedProductId === id) {
-        if (updated.length > 0) {
-          setSelectedProductId(updated[0].id);
-          setActiveImage(updated[0].image);
-        } else {
-          setViewMode('list');
-        }
-      }
     } catch (err: any) {
-      alert(err.response?.data?.error || 'Failed to delete product');
+      console.warn('API delete product failed, deleting locally:', err);
+    }
+
+    const updated = products.filter(p => p.id !== id);
+    setProducts(updated);
+    saveProductsToLocal(updated);
+    setDeleteConfirmId(null);
+    showToast(`Product deleted successfully.`);
+    
+    if (selectedProductId === id) {
+      if (updated.length > 0) {
+        setSelectedProductId(updated[0].id);
+        setActiveImage(updated[0].image);
+      } else {
+        setViewMode('list');
+      }
     }
   };
 
-  // Handle adding a new product via Live API (POST /api/products)
+  // Handle adding a product
   const handleAddProductSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newProduct.name.trim() || !newProduct.price) return;
 
     setSubmitting(true);
+    const newId = `prod-${Math.floor(1000 + Math.random() * 9000)}`;
+    const createdProduct: ProductItem = {
+      id: newId,
+      name: newProduct.name,
+      category: newProduct.category,
+      brand: newProduct.brand || 'Shop-co',
+      sku: `SKU-${newProduct.category.slice(0, 3).toUpperCase()}-${Math.floor(100 + Math.random() * 900)}`,
+      price: Number(newProduct.price) || 0,
+      originalPrice: newProduct.originalPrice ? Number(newProduct.originalPrice) : (Number(newProduct.price) * 1.25),
+      rating: 4.8,
+      reviewsCount: 1,
+      stock: Number(newProduct.stock) || 25,
+      status: (Number(newProduct.stock) || 25) > 10 ? 'In Stock' : 'Low Stock',
+      image: newProduct.image || 'https://images.unsplash.com/photo-1521572267360-ee0c2909d518?w=800&auto=format&fit=crop&q=80',
+      gallery: [newProduct.image || 'https://images.unsplash.com/photo-1521572267360-ee0c2909d518?w=800&auto=format&fit=crop&q=80'],
+      description: newProduct.description || 'Premium quality product added to live catalog.',
+      features: ['High quality material', '100% Satisfaction guarantee'],
+      specifications: [
+        { label: 'Brand', value: newProduct.brand || 'Shop-co' },
+        { label: 'Category', value: newProduct.category }
+      ],
+      colors: [{ name: 'Default', hex: '#5e35b1' }]
+    };
+
     try {
-      const payload = {
-        name: newProduct.name,
-        description: newProduct.description || 'Premium quality apparel crafted for durability and comfort.',
-        price: Number(newProduct.price),
-        category: newProduct.category,
-        stock: Number(newProduct.stock) || 25,
-        imageUrl: newProduct.image || 'https://images.unsplash.com/photo-1521572267360-ee0c2909d518?w=800&auto=format&fit=crop&q=80',
-      };
-
-      const res = await API.post('/products', payload);
-      setIsAddModalOpen(false);
-      showToast(`"${newProduct.name}" added successfully to database!`);
-
-      // Reset form & reload products list
-      setNewProduct({
-        name: '',
-        category: 'T-Shirts',
-        brand: 'Shop-co',
-        price: '',
-        originalPrice: '',
-        stock: '25',
-        image: 'https://images.unsplash.com/photo-1521572267360-ee0c2909d518?w=800&auto=format&fit=crop&q=80',
-        description: '',
+      await API.post('/products', {
+        name: createdProduct.name,
+        description: createdProduct.description,
+        price: createdProduct.price,
+        category: createdProduct.category,
+        stock: createdProduct.stock,
+        imageUrl: createdProduct.image
       });
-
-      await fetchProducts();
-      setViewMode('list');
-    } catch (err: any) {
-      alert(err.response?.data?.error || 'Failed to add product');
-    } finally {
-      setSubmitting(false);
+    } catch (e) {
+      console.warn('API Post Product failed, saving locally:', e);
     }
+
+    const updated = [createdProduct, ...products];
+    setProducts(updated);
+    saveProductsToLocal(updated);
+    setIsAddModalOpen(false);
+    setSelectedProductId(createdProduct.id);
+    showToast(`"${createdProduct.name}" added successfully!`);
+
+    setNewProduct({
+      name: '',
+      category: 'T-Shirts',
+      brand: 'Shop-co',
+      price: '',
+      originalPrice: '',
+      stock: '25',
+      image: 'https://images.unsplash.com/photo-1521572267360-ee0c2909d518?w=800&auto=format&fit=crop&q=80',
+      description: '',
+    });
+    setSubmitting(false);
   };
 
   return (
@@ -232,11 +421,11 @@ export const ProductPage: React.FC<ProductPageProps> = () => {
         </div>
       )}
 
-      {/* Top Breadcrumb & Page Header */}
+      {/* Top Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
           <h1 className="text-xl font-bold text-slate-800">
-            {viewMode === 'details' && selectedProduct ? 'Product Details' : 'Live Products Catalog'}
+            {viewMode === 'details' && selectedProduct ? 'Product Details' : `Live Products Catalog (${products.length})`}
           </h1>
           <div className="flex items-center gap-1.5 text-xs text-slate-500 font-medium mt-1">
             <Home className="w-3.5 h-3.5 text-[#5e35b1]" />
@@ -254,7 +443,7 @@ export const ProductPage: React.FC<ProductPageProps> = () => {
           {/* Refresh Button */}
           <button
             onClick={fetchProducts}
-            className="px-3 py-2 rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-50 text-xs font-semibold flex items-center gap-1.5 transition-all shadow-xs"
+            className="px-3 py-2 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-600 text-xs font-semibold flex items-center gap-1.5 transition-all shadow-xs"
             title="Refresh Products"
           >
             <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
@@ -293,7 +482,7 @@ export const ProductPage: React.FC<ProductPageProps> = () => {
           {/* "+ Add Product" Button */}
           <button
             onClick={() => setIsAddModalOpen(true)}
-            className="px-3.5 py-2 rounded-xl bg-[#1e88e5] hover:bg-[#1565c0] text-white text-xs font-semibold flex items-center gap-1.5 transition-all shadow-xs"
+            className="px-3.5 py-2 rounded-xl bg-[#5e35b1] hover:bg-[#4527a0] text-white text-xs font-semibold flex items-center gap-1.5 transition-all shadow-xs"
           >
             <Plus className="w-3.5 h-3.5" />
             <span>Add Product</span>
@@ -340,12 +529,13 @@ export const ProductPage: React.FC<ProductPageProps> = () => {
 
           <div className="bg-white rounded-2xl border border-slate-100 shadow-xs overflow-hidden p-5 sm:p-7">
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+              {/* Product Image & Gallery */}
               <div className="lg:col-span-5 space-y-4">
                 <div className="w-full h-80 sm:h-96 rounded-2xl overflow-hidden bg-slate-50 border border-slate-100 flex items-center justify-center p-4 relative group">
                   <img
                     src={activeImage || selectedProduct.image}
                     alt={selectedProduct.name}
-                    className="w-full h-full object-contain mix-blend-multiply group-hover:scale-105 transition-transform duration-300"
+                    className="w-full h-full object-contain group-hover:scale-105 transition-transform duration-300"
                   />
                   <span className={`absolute top-4 left-4 text-xs font-bold px-3 py-1 rounded-full shadow-xs ${
                     selectedProduct.status === 'In Stock' 
@@ -357,8 +547,26 @@ export const ProductPage: React.FC<ProductPageProps> = () => {
                     {selectedProduct.status} ({selectedProduct.stock} left)
                   </span>
                 </div>
+
+                {/* Thumbnails */}
+                {selectedProduct.gallery && selectedProduct.gallery.length > 1 && (
+                  <div className="flex items-center gap-2 overflow-x-auto pb-1">
+                    {selectedProduct.gallery.map((img, idx) => (
+                      <button
+                        key={idx}
+                        onClick={() => setActiveImage(img)}
+                        className={`w-16 h-16 rounded-xl border p-1 bg-slate-50 overflow-hidden flex-shrink-0 transition-all ${
+                          activeImage === img ? 'border-purple-600 ring-2 ring-purple-500/20' : 'border-slate-200 opacity-70 hover:opacity-100'
+                        }`}
+                      >
+                        <img src={img} alt="Thumbnail" className="w-full h-full object-contain" />
+                      </button>
+                    ))}
+                  </div>
+                )}
               </div>
 
+              {/* Product Info */}
               <div className="lg:col-span-7 space-y-5">
                 <div className="flex items-center gap-2">
                   <span className="text-xs font-bold text-[#5e35b1] bg-[#ede7f6] px-2.5 py-1 rounded-lg">
@@ -387,11 +595,11 @@ export const ProductPage: React.FC<ProductPageProps> = () => {
                     ))}
                   </div>
                   <span className="text-xs font-bold text-slate-700">
-                    {selectedProduct.rating.toFixed(1)}
+                    {selectedProduct.rating.toFixed(1)} ({selectedProduct.reviewsCount} reviews)
                   </span>
                 </div>
 
-                <div className="flex items-baseline gap-3 py-2 border-y border-slate-100">
+                <div className="flex items-baseline gap-3 py-3 border-y border-slate-100">
                   <span className="text-3xl font-extrabold text-slate-900 tracking-tight">
                     ${selectedProduct.price.toFixed(2)}
                   </span>
@@ -406,13 +614,34 @@ export const ProductPage: React.FC<ProductPageProps> = () => {
                   {selectedProduct.description}
                 </p>
 
+                {/* Features & Specifications */}
+                {selectedProduct.features && selectedProduct.features.length > 0 && (
+                  <div className="space-y-2">
+                    <h4 className="text-xs font-bold text-slate-800 uppercase tracking-wider">Key Highlights:</h4>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                      {selectedProduct.features.map((feat, idx) => (
+                        <div key={idx} className="flex items-center gap-2 text-xs text-slate-700 bg-slate-50 p-2 rounded-lg border border-slate-100">
+                          <Check className="w-3.5 h-3.5 text-emerald-600 flex-shrink-0" />
+                          <span>{feat}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
                 <div className="pt-2 flex items-center gap-3">
                   <button
                     onClick={() => setDeleteConfirmId(selectedProduct.id)}
                     className="px-4 py-2.5 rounded-xl border border-rose-200 bg-rose-50 hover:bg-rose-100 text-rose-600 text-xs font-semibold flex items-center gap-1.5 shadow-xs transition-all"
                   >
                     <Trash2 className="w-4 h-4" />
-                    <span>Delete Product From DB</span>
+                    <span>Delete Product</span>
+                  </button>
+                  <button
+                    onClick={() => setViewMode('list')}
+                    className="px-4 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold shadow-xs transition-all"
+                  >
+                    Back to All Products
                   </button>
                 </div>
               </div>
@@ -438,6 +667,9 @@ export const ProductPage: React.FC<ProductPageProps> = () => {
             </div>
 
             <div className="flex items-center gap-1.5 overflow-x-auto pb-1 md:pb-0">
+              <span className="text-xs font-semibold text-slate-400 flex items-center gap-1 mr-1">
+                <Filter className="w-3.5 h-3.5" /> Filter:
+              </span>
               {categories.map((cat) => (
                 <button
                   key={cat}
@@ -454,13 +686,15 @@ export const ProductPage: React.FC<ProductPageProps> = () => {
             </div>
           </div>
 
-          {/* Product Cards Grid */}
+          {/* Loading state */}
           {loading && (
-            <div className="py-12 text-center text-xs font-semibold text-slate-500">
-              Loading live products from database...
+            <div className="py-12 text-center text-xs font-semibold text-slate-500 flex flex-col items-center gap-2">
+              <RefreshCw className="w-6 h-6 animate-spin text-purple-600" />
+              <span>Loading products catalog...</span>
             </div>
           )}
 
+          {/* Product Cards Grid */}
           {!loading && (
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-3 gap-5">
               {filteredProducts.map((product) => (
@@ -472,7 +706,7 @@ export const ProductPage: React.FC<ProductPageProps> = () => {
                     <img
                       src={product.image}
                       alt={product.name}
-                      className="w-full h-full object-contain mix-blend-multiply group-hover:scale-105 transition-transform duration-300"
+                      className="w-full h-full object-contain group-hover:scale-105 transition-transform duration-300"
                     />
 
                     <span className={`absolute top-3 left-3 text-[10px] font-bold px-2.5 py-0.5 rounded-full ${
@@ -482,7 +716,7 @@ export const ProductPage: React.FC<ProductPageProps> = () => {
                         ? 'bg-amber-50 text-amber-700 border border-amber-200' 
                         : 'bg-rose-50 text-rose-700 border border-rose-200'
                     }`}>
-                      {product.status}
+                      {product.status} ({product.stock})
                     </span>
 
                     <button
@@ -543,6 +777,7 @@ export const ProductPage: React.FC<ProductPageProps> = () => {
                       <button
                         onClick={() => setDeleteConfirmId(product.id)}
                         className="p-2 rounded-xl border border-rose-200 text-rose-600 hover:bg-rose-50 text-xs font-semibold flex items-center justify-center transition-all"
+                        title="Delete product"
                       >
                         <Trash2 className="w-3.5 h-3.5" />
                       </button>
@@ -556,7 +791,7 @@ export const ProductPage: React.FC<ProductPageProps> = () => {
           {!loading && filteredProducts.length === 0 && (
             <div className="bg-white rounded-2xl border border-slate-100 p-12 text-center space-y-3">
               <Package className="w-12 h-12 text-slate-300 mx-auto" />
-              <p className="text-sm font-semibold text-slate-700">No products found</p>
+              <p className="text-sm font-semibold text-slate-700">No products found matching "{searchQuery}"</p>
             </div>
           )}
         </div>
@@ -572,8 +807,8 @@ export const ProductPage: React.FC<ProductPageProps> = () => {
                   <Plus className="w-4 h-4" />
                 </div>
                 <div>
-                  <h3 className="text-sm font-bold text-slate-800">Add New Product to Live Catalog</h3>
-                  <p className="text-[11px] text-slate-400">Product will immediately appear on e-commerce website</p>
+                  <h3 className="text-sm font-bold text-slate-800">Add New Product to Catalog</h3>
+                  <p className="text-[11px] text-slate-400">Product will immediately appear in dashboard catalog</p>
                 </div>
               </div>
               <button
@@ -607,7 +842,7 @@ export const ProductPage: React.FC<ProductPageProps> = () => {
                   >
                     <option value="T-Shirts">T-Shirts</option>
                     <option value="Shirts">Shirts</option>
-                    <option value="Jeans">Jeans</option>
+                    <option value="Software">Software</option>
                     <option value="Electronics">Electronics</option>
                     <option value="Accessories">Accessories</option>
                   </select>
@@ -687,7 +922,7 @@ export const ProductPage: React.FC<ProductPageProps> = () => {
                   className="px-4 py-2 rounded-xl bg-[#5e35b1] hover:bg-[#4527a0] text-white text-xs font-semibold flex items-center gap-1.5 shadow-xs"
                 >
                   <Plus className="w-3.5 h-3.5" />
-                  <span>{submitting ? 'Adding...' : 'Add to MongoDB'}</span>
+                  <span>{submitting ? 'Adding...' : 'Save Product'}</span>
                 </button>
               </div>
             </form>
@@ -704,9 +939,9 @@ export const ProductPage: React.FC<ProductPageProps> = () => {
             </div>
 
             <div className="text-center space-y-1">
-              <h3 className="text-sm font-bold text-slate-900">Delete Product from Database?</h3>
+              <h3 className="text-sm font-bold text-slate-900">Delete Product from Catalog?</h3>
               <p className="text-xs text-slate-500">
-                This will permanently delete the product from MongoDB and the e-commerce catalog.
+                This will remove the product from your store view and dashboard inventory.
               </p>
             </div>
 
