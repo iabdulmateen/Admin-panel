@@ -1,13 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { 
   Search, 
-  Download, 
   Plus, 
   Home, 
   ChevronRight, 
   MoreVertical, 
   ChevronLeft,
-  ArrowUp,
   RefreshCw,
   X,
   Trash2,
@@ -38,134 +36,9 @@ export interface OrderItemData {
   trackingNumber?: string;
 }
 
-const defaultOrderList: OrderItemData[] = [
-  {
-    id: '#ORD-009841',
-    mongoId: '1',
-    customerName: 'Eleanor Vance',
-    customerEmail: 'eleanor.vance@company.com',
-    branch: 'New York, USA',
-    paymentType: 'Mastercard',
-    quantity: 2,
-    totalPrice: 418.00,
-    orderDate: '05 Sep 2026',
-    status: 'Complete',
-    itemsSummary: 'Berry Pro React MUI Admin Template, Extended License',
-    shippingAddress: '742 Evergreen Terrace, Springfield, OR 97477, USA',
-    trackingNumber: 'TRK-US-98234190'
-  },
-  {
-    id: '#ORD-009840',
-    mongoId: '2',
-    customerName: 'Marcus Thorne',
-    customerEmail: 'm.thorne@technova.io',
-    branch: 'London, UK',
-    paymentType: 'PayPal',
-    quantity: 3,
-    totalPrice: 297.00,
-    orderDate: '05 Sep 2026',
-    status: 'Pending',
-    itemsSummary: 'Figma UI Design Kit, SLA Support Addon',
-    shippingAddress: '45 Wall Street, Suite 1200, New York, NY 10005, USA',
-    trackingNumber: 'TRK-US-98234189'
-  },
-  {
-    id: '#ORD-009839',
-    mongoId: '3',
-    customerName: 'Sophia Lindqvist',
-    customerEmail: 'sophia@nordicdesign.se',
-    branch: 'Stockholm, Sweden',
-    paymentType: 'Visa',
-    quantity: 1,
-    totalPrice: 129.00,
-    orderDate: '04 Sep 2026',
-    status: 'Complete',
-    itemsSummary: 'ApexCharts Enterprise Analytics Dashboard',
-    shippingAddress: 'Birger Jarlsgatan 18, 114 34 Stockholm, Sweden',
-    trackingNumber: 'TRK-EU-44210982'
-  },
-  {
-    id: '#ORD-009838',
-    mongoId: '4',
-    customerName: 'David Chen',
-    customerEmail: 'd.chen@apexsoftware.cn',
-    branch: 'Shenzhen, China',
-    paymentType: 'Stripe',
-    quantity: 2,
-    totalPrice: 148.00,
-    orderDate: '04 Sep 2026',
-    status: 'Hold',
-    itemsSummary: 'Full-Stack Next.js 15 Starter Kit, PostgreSQL DB Adapter',
-    shippingAddress: 'Room 802, High-Tech Industrial Park, Shenzhen, China',
-    trackingNumber: 'TRK-AP-10293812'
-  },
-  {
-    id: '#ORD-009837',
-    mongoId: '5',
-    customerName: 'Amira Al-Mansoor',
-    customerEmail: 'amira@gulfinnovate.ae',
-    branch: 'Dubai, UAE',
-    paymentType: 'Apple Pay',
-    quantity: 1,
-    totalPrice: 499.00,
-    orderDate: '04 Sep 2026',
-    status: 'Complete',
-    itemsSummary: 'Berry Dashboard Ultimate Bundle (React + Vue + Angular)',
-    shippingAddress: 'Downtown Dubai, Boulevard Plaza Tower 1, Dubai, UAE',
-    trackingNumber: 'TRK-ME-77218392'
-  },
-  {
-    id: '#ORD-009836',
-    mongoId: '6',
-    customerName: 'Julian Rossi',
-    customerEmail: 'julian.rossi@milano-agency.it',
-    branch: 'Milano, Italy',
-    paymentType: 'Mastercard',
-    quantity: 1,
-    totalPrice: 79.00,
-    orderDate: '03 Sep 2026',
-    status: 'Cancel',
-    itemsSummary: 'E-commerce UI Components & Cart Checkout Kit',
-    shippingAddress: 'Via Monte Napoleone 8, 20121 Milano, Italy',
-    trackingNumber: 'TRK-EU-99102431'
-  },
-  {
-    id: '#ORD-009835',
-    mongoId: '7',
-    customerName: 'Chloe Bennett',
-    customerEmail: 'chloe.bennett@sydneyventures.au',
-    branch: 'Sydney, Australia',
-    paymentType: 'Visa',
-    quantity: 2,
-    totalPrice: 388.00,
-    orderDate: '03 Sep 2026',
-    status: 'Complete',
-    itemsSummary: 'Berry SaaS Architecture Kit, Auth0 Module',
-    shippingAddress: 'Level 14, 100 George St, Sydney, NSW 2000, Australia',
-    trackingNumber: 'TRK-AU-55210941'
-  },
-  {
-    id: '#ORD-009834',
-    mongoId: '8',
-    customerName: 'Klaus Schmidt',
-    customerEmail: 'klaus.schmidt@berlintech.de',
-    branch: 'Berlin, Germany',
-    paymentType: 'COD',
-    quantity: 1,
-    totalPrice: 69.00,
-    orderDate: '02 Sep 2026',
-    status: 'Pending',
-    itemsSummary: 'Tailwind CSS v4 Berry Admin Dashboard',
-    shippingAddress: 'Friedrichstraße 43, 10117 Berlin, Germany',
-    trackingNumber: 'TRK-EU-33190284'
-  }
-];
-
 interface OrderListPageProps {
   themeConfig?: ThemeConfig;
 }
-
-const LOCAL_STORAGE_KEY = 'berry_dashboard_orders_v2';
 
 export const OrderListPage: React.FC<OrderListPageProps> = () => {
   const [orders, setOrders] = useState<OrderItemData[]>([]);
@@ -190,7 +63,7 @@ export const OrderListPage: React.FC<OrderListPageProps> = () => {
     branch: 'Karachi, Pakistan',
     paymentType: 'Card',
     totalPrice: '',
-    itemsSummary: '1x Berry Admin Template',
+    itemsSummary: '1x Clothing Order',
     status: 'Pending' as OrderItemData['status']
   });
 
@@ -201,27 +74,12 @@ export const OrderListPage: React.FC<OrderListPageProps> = () => {
     }, 3500);
   };
 
-  // Helper to save orders to localStorage
-  const saveOrdersToLocal = (newOrders: OrderItemData[]) => {
-    try {
-      localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(newOrders));
-    } catch (e) {
-      console.warn('LocalStorage save error:', e);
-    }
-  };
-
-  // Live orders fetch with graceful local fallback
-  const [searchQuery, setSearchQuery] = useState('');
-  const [page, setPage] = useState(1);
-  const [rowsPerPage, setRowsPerPage] = useState(10);
-  const [selectedIds, setSelectedIds] = useState<string[]>([]);
-
-  // 2. Fetch Orders from MongoDB Atlas
+  // Fetch Live Orders from MongoDB Atlas
   const fetchOrders = async () => {
     setLoading(true);
     try {
       const res = await API.get('/orders');
-      if (res.data && Array.isArray(res.data) && res.data.length > 0) {
+      if (res.data && Array.isArray(res.data)) {
         const formattedOrders: OrderItemData[] = res.data.map((order: any) => {
           const totalQty = order.orderItems?.reduce(
             (acc: number, item: any) => acc + (item.qty || item.quantity || 1),
@@ -253,41 +111,22 @@ export const OrderListPage: React.FC<OrderListPageProps> = () => {
         });
 
         setOrders(formattedOrders);
-        saveOrdersToLocal(formattedOrders);
       } else {
-        loadFallbackOrders();
+        setOrders([]);
       }
     } catch (err) {
-      console.warn('Could not load live orders from API server, switching to local cache:', err);
-      loadFallbackOrders();
+      console.warn('Could not load orders:', err);
+      setOrders([]);
     } finally {
       setLoading(false);
     }
-  };
-
-  const loadFallbackOrders = () => {
-    try {
-      const saved = localStorage.getItem(LOCAL_STORAGE_KEY);
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.length > 0) {
-          setOrders(parsed);
-          return;
-        }
-      }
-    } catch (e) {
-      console.warn('Error reading local orders:', e);
-    }
-    setOrders(defaultOrderList);
-    saveOrdersToLocal(defaultOrderList);
   };
 
   useEffect(() => {
     fetchOrders();
   }, []);
 
-  // Filtering
-  const filteredOrders = orders.filter(order => {
+  const filteredOrders = orders.filter((order: OrderItemData) => {
     const matchesQuery = 
       order.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
       order.customerName.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -296,12 +135,7 @@ export const OrderListPage: React.FC<OrderListPageProps> = () => {
       order.paymentType.toLowerCase().includes(searchQuery.toLowerCase()) ||
       order.status.toLowerCase().includes(searchQuery.toLowerCase());
 
-    const matchesStatus = selectedStatus === 'All' || 
-      (selectedStatus === 'Complete' && order.status === 'Complete') ||
-      (selectedStatus === 'Pending' && order.status === 'Pending') ||
-      (selectedStatus === 'Cancel' && order.status === 'Cancel') ||
-      (selectedStatus === 'Hold' && order.status === 'Hold');
-
+    const matchesStatus = selectedStatus === 'All' || order.status === selectedStatus;
     return matchesQuery && matchesStatus;
   });
 
@@ -313,17 +147,16 @@ export const OrderListPage: React.FC<OrderListPageProps> = () => {
     if (selectedIds.length === paginatedOrders.length) {
       setSelectedIds([]);
     } else {
-      setSelectedIds(paginatedOrders.map(o => o.id));
+      setSelectedIds(paginatedOrders.map((o: OrderItemData) => o.id));
     }
   };
 
   const toggleSelectOne = (id: string) => {
-    setSelectedIds(prev => 
-      prev.includes(id) ? prev.filter(item => item !== id) : [...prev, id]
+    setSelectedIds((prev: string[]) => 
+      prev.includes(id) ? prev.filter((item: string) => item !== id) : [...prev, id]
     );
   };
 
-  // Order Actions: Add, Delete, Update Status
   const handleAddOrderSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newOrder.customerName.trim() || !newOrder.totalPrice) return;
@@ -345,16 +178,13 @@ export const OrderListPage: React.FC<OrderListPageProps> = () => {
       trackingNumber: `TRK-PK-${Math.floor(100000 + Math.random() * 900000)}`
     };
 
-    // Try API POST, fallback to local state
     try {
       await API.post('/orders', createdOrder);
     } catch (e) {
-      console.warn('API Post Order failed, creating locally:', e);
+      console.warn('API Post Order failed:', e);
     }
 
-    const updated = [createdOrder, ...orders];
-    setOrders(updated);
-    saveOrdersToLocal(updated);
+    setOrders([createdOrder, ...orders]);
     setIsAddModalOpen(false);
     showToast(`Order "${newId}" created successfully!`);
 
@@ -364,7 +194,7 @@ export const OrderListPage: React.FC<OrderListPageProps> = () => {
       branch: 'Karachi, Pakistan',
       paymentType: 'Card',
       totalPrice: '',
-      itemsSummary: '1x Berry Admin Template',
+      itemsSummary: '1x Clothing Item',
       status: 'Pending'
     });
     setSubmitting(false);
@@ -372,13 +202,15 @@ export const OrderListPage: React.FC<OrderListPageProps> = () => {
 
   const handleDeleteOrder = async (id: string) => {
     try {
-      await API.delete(`/orders/${id}`);
+      const order = orders.find(o => o.id === id);
+      if (order?.mongoId) {
+        await API.delete(`/orders/${order.mongoId}`);
+      }
     } catch (e) {
-      console.warn('API delete failed, removing locally:', e);
+      console.warn('API delete failed:', e);
     }
     const updated = orders.filter(o => o.id !== id);
     setOrders(updated);
-    saveOrdersToLocal(updated);
     setSelectedIds(prev => prev.filter(item => item !== id));
     setActiveMenuOrderId(null);
     if (detailOrder?.id === id) setDetailOrder(null);
@@ -388,21 +220,11 @@ export const OrderListPage: React.FC<OrderListPageProps> = () => {
   const handleUpdateStatus = (id: string, newStatus: OrderItemData['status']) => {
     const updated = orders.map(o => o.id === id ? { ...o, status: newStatus } : o);
     setOrders(updated);
-    saveOrdersToLocal(updated);
     setActiveMenuOrderId(null);
     if (detailOrder?.id === id) {
       setDetailOrder({ ...detailOrder, status: newStatus });
     }
     showToast(`Order ${id} status updated to ${newStatus}`);
-  };
-
-  const handleDeleteSelected = () => {
-    if (selectedIds.length === 0) return;
-    const updated = orders.filter(o => !selectedIds.includes(o.id));
-    setOrders(updated);
-    saveOrdersToLocal(updated);
-    setSelectedIds([]);
-    showToast(`${selectedIds.length} orders deleted.`);
   };
 
   const getStatusBadge = (status: OrderItemData['status']) => {
@@ -442,7 +264,6 @@ export const OrderListPage: React.FC<OrderListPageProps> = () => {
 
   return (
     <div className="p-4 sm:p-6 space-y-6 max-w-[1600px] mx-auto transition-all">
-      {/* Toast Notification */}
       {notification && (
         <div className="fixed bottom-6 right-6 z-50 bg-slate-900 text-white text-xs font-semibold px-4 py-3 rounded-xl shadow-xl flex items-center gap-2 border border-slate-700 animate-in fade-in duration-200">
           <Check className="w-4 h-4 text-emerald-400" />
@@ -450,7 +271,7 @@ export const OrderListPage: React.FC<OrderListPageProps> = () => {
         </div>
       )}
 
-      {/* Top Breadcrumb & Page Title */}
+      {/* Top Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
           <h1 className="text-xl font-bold text-slate-800">Orders Management ({orders.length})</h1>
@@ -464,7 +285,6 @@ export const OrderListPage: React.FC<OrderListPageProps> = () => {
         </div>
 
         <div className="flex items-center gap-2.5">
-          {/* Refresh Button */}
           <button
             onClick={fetchOrders}
             className="px-3 py-2 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-600 text-xs font-semibold flex items-center gap-1.5 transition-all shadow-xs"
@@ -474,24 +294,6 @@ export const OrderListPage: React.FC<OrderListPageProps> = () => {
             <span>Refresh</span>
           </button>
 
-          {/* Export JSON Button */}
-          <button
-            onClick={() => {
-              const jsonString = `data:text/json;charset=utf-8,${encodeURIComponent(JSON.stringify(orders, null, 2))}`;
-              const downloadAnchor = document.createElement('a');
-              downloadAnchor.setAttribute('href', jsonString);
-              downloadAnchor.setAttribute('download', 'orders_export.json');
-              document.body.appendChild(downloadAnchor);
-              downloadAnchor.click();
-              downloadAnchor.remove();
-            }}
-            className="px-3.5 py-2 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-xs font-semibold flex items-center gap-1.5 transition-all shadow-xs"
-          >
-            <Download className="w-3.5 h-3.5" />
-            <span>Export JSON</span>
-          </button>
-
-          {/* "+ Add Order" Button */}
           <button
             onClick={() => setIsAddModalOpen(true)}
             className="px-3.5 py-2 rounded-xl bg-[#5e35b1] hover:bg-[#4527a0] text-white text-xs font-semibold flex items-center gap-1.5 transition-all shadow-xs"
@@ -502,9 +304,8 @@ export const OrderListPage: React.FC<OrderListPageProps> = () => {
         </div>
       </div>
 
-      {/* Main Table Card */}
+      {/* Table Card */}
       <div className="bg-white rounded-2xl border border-slate-100 shadow-xs overflow-hidden">
-        {/* Filter Tabs & Search Bar */}
         <div className="p-4 sm:p-5 flex flex-col md:flex-row md:items-center justify-between gap-3 border-b border-slate-100">
           <div className="relative w-full md:w-80">
             <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
@@ -528,22 +329,12 @@ export const OrderListPage: React.FC<OrderListPageProps> = () => {
                 className={`px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-all ${
                   selectedStatus === status
                     ? 'bg-[#ede7f6] text-[#5e35b1] border border-purple-200 shadow-xs'
-                    : 'bg-slate-50 text-slate-600 hover:bg-slate-100 border border-transparent'
+                    : 'bg-slate-50 text-slate-600 hover:bg-slate-100'
                 }`}
               >
                 {status}
               </button>
             ))}
-
-            {selectedIds.length > 0 && (
-              <button
-                onClick={handleDeleteSelected}
-                className="px-3 py-1.5 rounded-xl bg-rose-50 text-rose-600 border border-rose-200 hover:bg-rose-100 text-xs font-semibold flex items-center gap-1 transition-all ml-2"
-              >
-                <Trash2 className="w-3.5 h-3.5" />
-                <span>Delete Selected ({selectedIds.length})</span>
-              </button>
-            )}
           </div>
         </div>
 
@@ -557,7 +348,7 @@ export const OrderListPage: React.FC<OrderListPageProps> = () => {
                     type="checkbox"
                     checked={paginatedOrders.length > 0 && selectedIds.length === paginatedOrders.length}
                     onChange={toggleSelectAll}
-                    className="w-4 h-4 rounded border-slate-300 text-purple-600 focus:ring-purple-500 cursor-pointer"
+                    className="w-4 h-4 rounded border-slate-300 text-purple-600 cursor-pointer"
                   />
                 </th>
                 <th className="py-3.5 px-4">Order ID</th>
@@ -593,7 +384,7 @@ export const OrderListPage: React.FC<OrderListPageProps> = () => {
                         type="checkbox"
                         checked={isSelected}
                         onChange={() => toggleSelectOne(order.id)}
-                        className="w-4 h-4 rounded border-slate-300 text-purple-600 focus:ring-purple-500 cursor-pointer"
+                        className="w-4 h-4 rounded border-slate-300 text-purple-600 cursor-pointer"
                       />
                     </td>
                     <td 
@@ -642,7 +433,6 @@ export const OrderListPage: React.FC<OrderListPageProps> = () => {
                         </button>
                       </div>
 
-                      {/* Dropdown Action Menu */}
                       {activeMenuOrderId === order.id && (
                         <div className="absolute right-4 top-10 z-30 w-44 bg-white rounded-xl shadow-xl border border-slate-100 p-1.5 text-left text-xs font-medium text-slate-700 space-y-1">
                           <button
@@ -652,7 +442,6 @@ export const OrderListPage: React.FC<OrderListPageProps> = () => {
                             <Eye className="w-3.5 h-3.5" /> View Details
                           </button>
                           <div className="border-t border-slate-100 my-1 pt-1">
-                            <span className="px-3 text-[10px] uppercase font-bold text-slate-400">Set Status</span>
                             <button
                               onClick={() => handleUpdateStatus(order.id, 'Complete')}
                               className="w-full text-left px-3 py-1 hover:bg-emerald-50 text-emerald-700 rounded-lg flex items-center gap-1.5"
@@ -664,18 +453,6 @@ export const OrderListPage: React.FC<OrderListPageProps> = () => {
                               className="w-full text-left px-3 py-1 hover:bg-amber-50 text-amber-700 rounded-lg flex items-center gap-1.5"
                             >
                               <Clock className="w-3 h-3" /> Mark Pending
-                            </button>
-                            <button
-                              onClick={() => handleUpdateStatus(order.id, 'Hold')}
-                              className="w-full text-left px-3 py-1 hover:bg-sky-50 text-sky-700 rounded-lg flex items-center gap-1.5"
-                            >
-                              <AlertCircle className="w-3 h-3" /> Mark Hold
-                            </button>
-                            <button
-                              onClick={() => handleUpdateStatus(order.id, 'Cancel')}
-                              className="w-full text-left px-3 py-1 hover:bg-rose-50 text-rose-700 rounded-lg flex items-center gap-1.5"
-                            >
-                              <XCircle className="w-3 h-3" /> Mark Cancelled
                             </button>
                           </div>
                           <div className="border-t border-slate-100 my-1 pt-1">
@@ -696,7 +473,7 @@ export const OrderListPage: React.FC<OrderListPageProps> = () => {
               {!loading && paginatedOrders.length === 0 && (
                 <tr>
                   <td colSpan={10} className="text-center py-12 text-slate-400 font-medium">
-                    No orders match your filter criteria.
+                    No live orders in database.
                   </td>
                 </tr>
               )}
@@ -745,7 +522,7 @@ export const OrderListPage: React.FC<OrderListPageProps> = () => {
         </div>
       </div>
 
-      {/* MODAL 1: ADD NEW ORDER MODAL */}
+      {/* Create Order Modal */}
       {isAddModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-xs p-4 overflow-y-auto">
           <div className="bg-white rounded-2xl border border-slate-100 shadow-2xl max-w-lg w-full p-6 space-y-4 my-8">
@@ -756,7 +533,7 @@ export const OrderListPage: React.FC<OrderListPageProps> = () => {
                 </div>
                 <div>
                   <h3 className="text-sm font-bold text-slate-800">Create New Order</h3>
-                  <p className="text-[11px] text-slate-400">Add order details to live dashboard management</p>
+                  <p className="text-[11px] text-slate-400">Add order details to live database</p>
                 </div>
               </div>
               <button
@@ -793,7 +570,7 @@ export const OrderListPage: React.FC<OrderListPageProps> = () => {
                 </div>
 
                 <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1">Branch / City</label>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">City / Branch</label>
                   <input
                     type="text"
                     placeholder="e.g. Karachi, Pakistan"
@@ -804,23 +581,7 @@ export const OrderListPage: React.FC<OrderListPageProps> = () => {
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1">Payment Type</label>
-                  <select
-                    value={newOrder.paymentType}
-                    onChange={e => setNewOrder({ ...newOrder, paymentType: e.target.value })}
-                    className="w-full px-3.5 py-2 text-xs border border-slate-200 rounded-xl bg-white"
-                  >
-                    <option value="Card">Card</option>
-                    <option value="Mastercard">Mastercard</option>
-                    <option value="Visa">Visa</option>
-                    <option value="PayPal">PayPal</option>
-                    <option value="Stripe">Stripe</option>
-                    <option value="COD">COD</option>
-                  </select>
-                </div>
-
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="block text-xs font-bold text-slate-700 mb-1">Total ($) *</label>
                   <input
@@ -849,17 +610,6 @@ export const OrderListPage: React.FC<OrderListPageProps> = () => {
                 </div>
               </div>
 
-              <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">Items Summary</label>
-                <input
-                  type="text"
-                  placeholder="e.g. 2x Berry Template, 1x SLA Support"
-                  value={newOrder.itemsSummary}
-                  onChange={e => setNewOrder({ ...newOrder, itemsSummary: e.target.value })}
-                  className="w-full px-3.5 py-2 text-xs border border-slate-200 rounded-xl"
-                />
-              </div>
-
               <div className="pt-2 flex items-center justify-end gap-2.5">
                 <button
                   type="button"
@@ -882,7 +632,7 @@ export const OrderListPage: React.FC<OrderListPageProps> = () => {
         </div>
       )}
 
-      {/* MODAL 2: ORDER DETAILS MODAL */}
+      {/* Details Modal */}
       {detailOrder && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-xs p-4">
           <div className="bg-white rounded-2xl border border-slate-100 shadow-2xl max-w-lg w-full p-6 space-y-4">
@@ -924,16 +674,8 @@ export const OrderListPage: React.FC<OrderListPageProps> = () => {
 
               <div className="bg-slate-50 p-3 rounded-xl border border-slate-100">
                 <div className="text-[11px] text-slate-400">Items Ordered</div>
-                <div className="font-semibold text-slate-700 mt-0.5">{detailOrder.itemsSummary || 'Standard Berry Product Package'}</div>
+                <div className="font-semibold text-slate-700 mt-0.5">{detailOrder.itemsSummary || 'Standard Product Package'}</div>
               </div>
-
-              {detailOrder.shippingAddress && (
-                <div className="bg-slate-50 p-3 rounded-xl border border-slate-100">
-                  <div className="text-[11px] text-slate-400">Shipping Address & Tracking</div>
-                  <div className="text-slate-700 font-medium">{detailOrder.shippingAddress}</div>
-                  <div className="text-purple-600 font-mono font-semibold mt-1">Tracking: {detailOrder.trackingNumber}</div>
-                </div>
-              )}
             </div>
 
             <div className="flex items-center justify-between pt-3 border-t border-slate-100">
