@@ -9,7 +9,7 @@ export type AuditCategory =
   | 'api'
   | 'production';
 
-export type ActivePage = 'dashboard' | 'orders' | 'customers';
+export type ActivePage = 'dashboard' | 'orders' | 'customers' | 'products' | 'product-details';
 
 export interface ThemeConfig {
   primaryColor: string;
@@ -29,17 +29,21 @@ export interface OrderItem {
 
 export interface Order {
   id: string;
+  mongoId?: string;
   customerName: string;
   customerEmail: string;
-  customerAvatar: string;
-  items: OrderItem[];
-  paymentMethod: 'Mastercard' | 'Visa' | 'PayPal' | 'Stripe' | 'Apple Pay';
+  customerAvatar?: string;
+  branch?: string;
+  items?: OrderItem[];
+  itemsSummary?: string;
+  paymentMethod: string;
   paymentCardLast4?: string;
   date: string;
   amount: number;
-  status: 'Completed' | 'Pending' | 'Processing' | 'Cancelled';
-  shippingAddress: string;
-  trackingNumber: string;
+  status: 'Complete' | 'Completed' | 'Pending' | 'Processing' | 'Cancelled' | 'Cancel' | 'Hold';
+  shippingAddress?: string;
+  trackingNumber?: string;
+  quantity?: number;
 }
 
 export interface Customer {
@@ -49,12 +53,42 @@ export interface Customer {
   avatar: string;
   phone: string;
   location: string;
-  country: string;
+  country?: string;
   totalOrders: number;
   totalSpent: number;
-  status: 'Active' | 'Pending' | 'Blocked';
-  joinedDate: string;
-  tier: 'VIP Client' | 'Standard' | 'Enterprise';
+  status: 'Active' | 'Pending' | 'Blocked' | 'Inactive';
+  joinedDate?: string;
+  tier: 'VIP Client' | 'Standard' | 'Enterprise' | string;
+}
+
+export interface ProductSpecification {
+  label: string;
+  value: string;
+}
+
+export interface ProductColor {
+  name: string;
+  hex: string;
+}
+
+export interface Product {
+  id: string;
+  name: string;
+  category: string;
+  brand: string;
+  sku: string;
+  price: number;
+  originalPrice: number;
+  rating: number;
+  reviewsCount: number;
+  stock: number;
+  status: 'In Stock' | 'Low Stock' | 'Out of Stock';
+  image: string;
+  gallery: string[];
+  description: string;
+  features: string[];
+  specifications: ProductSpecification[];
+  colors: ProductColor[];
 }
 
 export interface ComponentInspection {

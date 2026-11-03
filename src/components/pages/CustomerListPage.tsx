@@ -16,25 +16,11 @@ import {
   UserX,
   Mail,
   Phone,
-  MapPin,
-  RefreshCw
+  MapPin
 } from 'lucide-react';
-import { ThemeConfig } from '../../types';
+import { ThemeConfig, Customer } from '../../types';
 
-interface CustomerItemData {
-  id: string;
-  name: string;
-  email: string;
-  phone: string;
-  location: string;
-  status: 'Active' | 'Inactive';
-  avatar: string;
-  tier?: string;
-  totalOrders?: number;
-  totalSpent?: number;
-}
-
-const defaultCustomerList: CustomerItemData[] = [
+const defaultCustomerList: Customer[] = [
   {
     id: 'cust-1',
     name: 'Caroline Pandolfi',
@@ -140,7 +126,7 @@ interface CustomerListPageProps {
 const LOCAL_STORAGE_CUSTOMERS_KEY = 'berry_dashboard_customers_v2';
 
 export const CustomerListPage: React.FC<CustomerListPageProps> = () => {
-  const [customers, setCustomers] = useState<CustomerItemData[]>([]);
+  const [customers, setCustomers] = useState<Customer[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedStatus, setSelectedStatus] = useState<string>('All');
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
@@ -150,7 +136,7 @@ export const CustomerListPage: React.FC<CustomerListPageProps> = () => {
 
   // Modals state
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
-  const [detailCustomer, setDetailCustomer] = useState<CustomerItemData | null>(null);
+  const [detailCustomer, setDetailCustomer] = useState<Customer | null>(null);
   const [activeMenuCustId, setActiveMenuCustId] = useState<string | null>(null);
 
   // New Customer Form State
@@ -159,7 +145,7 @@ export const CustomerListPage: React.FC<CustomerListPageProps> = () => {
     email: '',
     phone: '',
     location: 'United States',
-    status: 'Active' as 'Active' | 'Inactive',
+    status: 'Active' as Customer['status'],
     tier: 'Standard'
   });
 
@@ -170,7 +156,7 @@ export const CustomerListPage: React.FC<CustomerListPageProps> = () => {
     }, 3500);
   };
 
-  const saveCustomersToLocal = (data: CustomerItemData[]) => {
+  const saveCustomersToLocal = (data: Customer[]) => {
     try {
       localStorage.setItem(LOCAL_STORAGE_CUSTOMERS_KEY, JSON.stringify(data));
     } catch (e) {
@@ -229,7 +215,7 @@ export const CustomerListPage: React.FC<CustomerListPageProps> = () => {
     e.preventDefault();
     if (!newCustomer.name.trim() || !newCustomer.email.trim()) return;
 
-    const created: CustomerItemData = {
+    const created: Customer = {
       id: `cust-${Date.now()}`,
       name: newCustomer.name,
       email: newCustomer.email,
@@ -270,7 +256,7 @@ export const CustomerListPage: React.FC<CustomerListPageProps> = () => {
 
   const handleToggleStatus = (id: string) => {
     const updated = customers.map(c => 
-      c.id === id ? { ...c, status: (c.status === 'Active' ? 'Inactive' : 'Active') as 'Active' | 'Inactive' } : c
+      c.id === id ? { ...c, status: (c.status === 'Active' ? 'Inactive' : 'Active') as Customer['status'] } : c
     );
     setCustomers(updated);
     saveCustomersToLocal(updated);
@@ -303,7 +289,7 @@ export const CustomerListPage: React.FC<CustomerListPageProps> = () => {
         </div>
       )}
 
-      {/* Top Breadcrumb & Page Title */}
+      {/* Top Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
           <h1 className="text-xl font-bold text-slate-800">Customer Directory ({customers.length})</h1>
@@ -317,7 +303,6 @@ export const CustomerListPage: React.FC<CustomerListPageProps> = () => {
         </div>
 
         <div className="flex items-center gap-2.5">
-          {/* Download JSON */}
           <button
             onClick={() => {
               const jsonString = `data:text/json;charset=utf-8,${encodeURIComponent(JSON.stringify(customers, null, 2))}`;
@@ -334,7 +319,6 @@ export const CustomerListPage: React.FC<CustomerListPageProps> = () => {
             <span>Export JSON</span>
           </button>
 
-          {/* Add New Button */}
           <button
             onClick={() => setIsAddModalOpen(true)}
             className="px-3.5 py-2 rounded-xl bg-[#1e88e5] hover:bg-[#1565c0] text-white text-xs font-semibold flex items-center gap-1.5 transition-all shadow-xs"
@@ -345,9 +329,8 @@ export const CustomerListPage: React.FC<CustomerListPageProps> = () => {
         </div>
       </div>
 
-      {/* Main White Table Card */}
+      {/* Main Table Card */}
       <div className="bg-white rounded-2xl border border-slate-100 shadow-xs overflow-hidden">
-        {/* Top Control Bar */}
         <div className="p-4 sm:p-5 flex flex-col md:flex-row md:items-center justify-between gap-3 border-b border-slate-100">
           <div className="relative w-full md:w-80">
             <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
@@ -491,7 +474,6 @@ export const CustomerListPage: React.FC<CustomerListPageProps> = () => {
                         </button>
                       </div>
 
-                      {/* Dropdown Menu */}
                       {activeMenuCustId === customer.id && (
                         <div className="absolute right-4 top-10 z-30 w-44 bg-white rounded-xl shadow-xl border border-slate-100 p-1.5 text-left text-xs font-medium text-slate-700 space-y-1">
                           <button
