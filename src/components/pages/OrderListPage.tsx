@@ -2,23 +2,19 @@ import React, { useState, useEffect } from 'react';
 import { 
   Search, 
   Plus, 
-  Home, 
-  ChevronRight, 
-  MoreVertical, 
   ChevronLeft,
+  ChevronRight,
   RefreshCw,
   X,
   Trash2,
-  CheckCircle2,
-  Clock,
-  XCircle,
-  AlertCircle,
   Eye,
-  Filter,
-  Check
+  Check,
+  Wifi,
+  WifiOff
 } from 'lucide-react';
 import { ThemeConfig } from '../../types';
 import API from '../../api';
+import socket from '../../../socket';
 
 export interface OrderItemData {
   id: string;
@@ -33,7 +29,6 @@ export interface OrderItemData {
   status: 'Pending' | 'Complete' | 'Cancel' | 'Hold';
   itemsSummary?: string;
   shippingAddress?: string;
-  trackingNumber?: string;
 }
 
 interface OrderListPageProps {
@@ -43,6 +38,7 @@ interface OrderListPageProps {
 export const OrderListPage: React.FC<OrderListPageProps> = () => {
   const [orders, setOrders] = useState<OrderItemData[]>([]);
   const [loading, setLoading] = useState(true);
+  const [isConnected, setIsConnected] = useState<boolean | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedStatus, setSelectedStatus] = useState<string>('All');
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
@@ -50,20 +46,17 @@ export const OrderListPage: React.FC<OrderListPageProps> = () => {
   const [rowsPerPage, setRowsPerPage] = useState(10);
   const [notification, setNotification] = useState<string | null>(null);
 
-  // Modals state
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [detailOrder, setDetailOrder] = useState<OrderItemData | null>(null);
-  const [activeMenuOrderId, setActiveMenuOrderId] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
-  // New Order Form
   const [newOrder, setNewOrder] = useState({
     customerName: '',
     customerEmail: '',
     branch: 'Karachi, Pakistan',
-    paymentType: 'Card',
+    paymentType: 'COD',
     totalPrice: '',
-    itemsSummary: '1x Clothing Order',
+    itemsSummary: '1x T-shirt with Tape Details',
     status: 'Pending' as OrderItemData['status']
   });
 
@@ -74,59 +67,183 @@ export const OrderListPage: React.FC<OrderListPageProps> = () => {
     }, 3500);
   };
 
-  // Fetch Live Orders from MongoDB Atlas
+const formatSingleOrder = (order: any): OrderItemData => {
+  const totalQty = order.orderItems?.reduce(
+    (acc: number, item: any) =>
+      acc + (item.qty || item.quantity || 1),
+    0
+  ) || 1;
+
+  const rawDate = order.createdAt
+    ? new Date(order.createdAt)
+    : new Date();
+
+  return {
+    id: `#${order._id ? order._id.slice(-6).toUpperCase() : 'ORD-1001'}`,
+    mongoId: order._id,
+    customerName:
+      order.customerInfo?.name ||
+      order.user?.name ||
+      'Guest Customer',
+    customerEmail:
+      order.customerInfo?.email ||
+      order.user?.email ||
+      'customer@example.com',
+    branch: order.shippingAddress?.city || 'Pakistan',
+    paymentType:
+      order.paymentMethod === 'Cash on Delivery'
+        ? 'COD'
+        : order.paymentMethod || 'COD',
+    quantity: totalQty,
+    totalPrice: Number(order.totalPrice) || 0,
+    orderDate: rawDate.toLocaleDateString('en-GB', {
+      day: '2-digit',
+      month: 'short',
+      year: 'numeric'
+    }),
+    status: order.isDelivered
+      ? 'Complete'
+      : order.status || 'Pending',
+    itemsSummary:
+      order.orderItems
+        ?.map((item: any) => `${item.name} (x${item.qty || 1})`)
+        .join(', ') || 'Clothing Items',
+    shippingAddress: order.shippingAddress
+      ? `${order.shippingAddress.address || ''}, ${order.shippingAddress.city || ''}`
+      : 'N/A',
+  };
+};
+
+  const formatAndSetOrders = (rawOrders: any[]) => {
+    const formattedOrders: OrderItemData[] = rawOrders.map((order: any) => {
+      const totalQty = order.orderItems?.reduce(
+        (acc: number, item: any) => acc + (item.qty || item.quantity || 1),
+        0
+      ) || 1;
+
+      const rawDate = order.createdAt ? new Date(order.createdAt) : new Date();
+      const formattedDate = rawDate.toLocaleDateString('en-GB', {
+        day: '2-digit',
+        month: 'short',
+        year: 'numeric'
+      });
+
+      return {
+        id: `#${order._id ? order._id.slice(-6).toUpperCase() : 'ORD-1001'}`,
+        mongoId: order._id,
+        customerName: order.customerInfo?.name || order.user?.name || 'Guest Customer',
+        customerEmail: order.customerInfo?.email || order.user?.email || 'customer@example.com',
+        branch: order.shippingAddress?.city || 'Pakistan',
+        paymentType: order.paymentMethod === 'Cash on Delivery' ? 'COD' : order.paymentMethod || 'COD',
+        quantity: totalQty,
+        totalPrice: Number(order.totalPrice) || 0,
+        orderDate: formattedDate,
+        status: order.isDelivered ? 'Complete' : (order.status || 'Pending'),
+        itemsSummary: order.orderItems?.map((i: any) => `${i.name} (x${i.qty || 1})`).join(', ') || 'Clothing Items',
+        shippingAddress: order.shippingAddress ? `${order.shippingAddress.address || ''}, ${order.shippingAddress.city || ''}` : 'N/A',
+      };
+    });
+
+    setOrders(formattedOrders);
+  };
+
   const fetchOrders = async () => {
     setLoading(true);
-    try {
-      const res = await API.get('/orders');
-      if (res.data && Array.isArray(res.data)) {
-        const formattedOrders: OrderItemData[] = res.data.map((order: any) => {
-          const totalQty = order.orderItems?.reduce(
-            (acc: number, item: any) => acc + (item.qty || item.quantity || 1),
-            0
-          ) || 1;
+    localStorage.removeItem('berry_dashboard_orders_v2');
 
-          const rawDate = order.createdAt ? new Date(order.createdAt) : new Date();
-          const formattedDate = rawDate.toLocaleDateString('en-GB', {
-            day: '2-digit',
-            month: 'short',
-            year: 'numeric'
-          });
+    const urls = [
+      'http://127.0.0.1:4000/api/orders', // 👈 Direct IPv4 loopback socket
+      'http://localhost:4000/api/orders',
+      '/api/orders'
+    ];
 
-          return {
-            id: `#${order._id ? order._id.slice(-6).toUpperCase() : 'ORDER'}`,
-            mongoId: order._id,
-            customerName: order.customerInfo?.name || order.user?.name || 'Guest Customer',
-            customerEmail: order.customerInfo?.email || order.user?.email || 'customer@example.com',
-            branch: order.shippingAddress?.city || 'Pakistan',
-            paymentType: order.paymentMethod === 'Cash on Delivery' ? 'COD' : order.paymentMethod || 'COD',
-            quantity: totalQty,
-            totalPrice: order.totalPrice || 0,
-            orderDate: formattedDate,
-            status: order.isDelivered ? 'Complete' : (order.status || 'Pending'),
-            itemsSummary: order.orderItems?.map((i: any) => i.name).join(', ') || 'Standard Order Items',
-            shippingAddress: order.shippingAddress?.address || 'Standard Delivery Address',
-            trackingNumber: `TRK-${Math.floor(100000 + Math.random() * 900000)}`
-          };
-        });
+    let rawOrders: any[] | null = null;
 
-        setOrders(formattedOrders);
-      } else {
-        setOrders([]);
+    for (const url of urls) {
+      try {
+        const res = await fetch(url);
+        if (res.ok) {
+          const data = await res.json();
+          if (Array.isArray(data)) {
+            rawOrders = data;
+            setIsConnected(true);
+            break;
+          }
+        }
+      } catch (e) {
+        // try next
       }
-    } catch (err) {
-      console.warn('Could not load orders:', err);
-      setOrders([]);
-    } finally {
-      setLoading(false);
     }
+
+    if (!rawOrders) {
+      try {
+        console.log('LOCAL STORAGE:', Object.keys(localStorage));
+
+console.log(
+  'POSSIBLE AUTH TOKENS:',
+  Object.entries(localStorage).map(([key, value]) => ({
+    key,
+    hasValue: !!value,
+    valueLength: value?.length
+  }))
+);
+        const res = await API.get('/orders');
+        if (res.data && Array.isArray(res.data)) {
+          rawOrders = res.data;
+          setIsConnected(true);
+        }
+      } catch (err) {
+        console.warn('Axios API error:', err);
+      }
+    }
+
+    if (rawOrders && Array.isArray(rawOrders)) {
+      formatAndSetOrders(rawOrders);
+    } else {
+      setIsConnected(false);
+    }
+    setLoading(false);
   };
 
   useEffect(() => {
     fetchOrders();
   }, []);
 
-  const filteredOrders = orders.filter((order: OrderItemData) => {
+useEffect(() => {
+  const handleNewOrder = (rawOrder: any) => {
+    console.log('NEW ORDER RECEIVED:', rawOrder);
+
+    const formattedOrder = formatSingleOrder(rawOrder);
+
+    console.log('FORMATTED ORDER:', formattedOrder);
+
+    setOrders((previousOrders) => {
+      console.log('PREVIOUS ORDERS:', previousOrders);
+
+      const alreadyExists = previousOrders.some(
+        (order) =>
+          order.mongoId === formattedOrder.mongoId ||
+          order.id === formattedOrder.id
+      );
+
+      console.log('ALREADY EXISTS:', alreadyExists);
+
+      if (alreadyExists) return previousOrders;
+
+      return [formattedOrder, ...previousOrders];
+      console.log('ADDING NEW ORDER TO STATE:', formattedOrder);
+    });
+
+    showToast(`New order received: ${formattedOrder.id}`);
+  };
+
+  socket.on('new-order', handleNewOrder);
+
+  return () => {
+    socket.off('new-order', handleNewOrder);
+  };
+}, []);
+  const filteredOrders = orders.filter(order => {
     const matchesQuery = 
       order.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
       order.customerName.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -135,7 +252,12 @@ export const OrderListPage: React.FC<OrderListPageProps> = () => {
       order.paymentType.toLowerCase().includes(searchQuery.toLowerCase()) ||
       order.status.toLowerCase().includes(searchQuery.toLowerCase());
 
-    const matchesStatus = selectedStatus === 'All' || order.status === selectedStatus;
+    const matchesStatus = selectedStatus === 'All' || 
+      (selectedStatus === 'Complete' && order.status === 'Complete') ||
+      (selectedStatus === 'Pending' && order.status === 'Pending') ||
+      (selectedStatus === 'Cancel' && order.status === 'Cancel') ||
+      (selectedStatus === 'Hold' && order.status === 'Hold');
+
     return matchesQuery && matchesStatus;
   });
 
@@ -147,13 +269,13 @@ export const OrderListPage: React.FC<OrderListPageProps> = () => {
     if (selectedIds.length === paginatedOrders.length) {
       setSelectedIds([]);
     } else {
-      setSelectedIds(paginatedOrders.map((o: OrderItemData) => o.id));
+      setSelectedIds(paginatedOrders.map(o => o.id));
     }
   };
 
   const toggleSelectOne = (id: string) => {
-    setSelectedIds((prev: string[]) => 
-      prev.includes(id) ? prev.filter((item: string) => item !== id) : [...prev, id]
+    setSelectedIds(prev => 
+      prev.includes(id) ? prev.filter(item => item !== id) : [...prev, id]
     );
   };
 
@@ -162,101 +284,51 @@ export const OrderListPage: React.FC<OrderListPageProps> = () => {
     if (!newOrder.customerName.trim() || !newOrder.totalPrice) return;
 
     setSubmitting(true);
-    const newId = `#ORD-${Math.floor(100000 + Math.random() * 900000)}`;
-    const createdOrder: OrderItemData = {
-      id: newId,
-      customerName: newOrder.customerName,
-      customerEmail: newOrder.customerEmail || `${newOrder.customerName.toLowerCase().replace(/\s+/g, '.')}@example.com`,
-      branch: newOrder.branch,
-      paymentType: newOrder.paymentType,
-      quantity: 1,
-      totalPrice: Number(newOrder.totalPrice) || 0,
-      orderDate: new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }),
-      status: newOrder.status,
-      itemsSummary: newOrder.itemsSummary,
-      shippingAddress: `${newOrder.branch}, Delivery Address`,
-      trackingNumber: `TRK-PK-${Math.floor(100000 + Math.random() * 900000)}`
-    };
-
     try {
-      await API.post('/orders', createdOrder);
+      await fetch('http://127.0.0.1:4000/api/orders', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          customerInfo: { name: newOrder.customerName, email: newOrder.customerEmail },
+          shippingAddress: { address: 'Main Street', city: newOrder.branch, country: 'Pakistan', postalCode: '75000' },
+          paymentMethod: newOrder.paymentType,
+          totalPrice: Number(newOrder.totalPrice),
+          orderItems: [{ name: newOrder.itemsSummary, qty: 1, price: Number(newOrder.totalPrice) }]
+        })
+      });
+      showToast('New Order saved to MongoDB!');
+      fetchOrders();
+      setIsAddModalOpen(false);
     } catch (e) {
-      console.warn('API Post Order failed:', e);
+      console.error('Post Order error:', e);
+    } finally {
+      setSubmitting(false);
     }
-
-    setOrders([createdOrder, ...orders]);
-    setIsAddModalOpen(false);
-    showToast(`Order "${newId}" created successfully!`);
-
-    setNewOrder({
-      customerName: '',
-      customerEmail: '',
-      branch: 'Karachi, Pakistan',
-      paymentType: 'Card',
-      totalPrice: '',
-      itemsSummary: '1x Clothing Item',
-      status: 'Pending'
-    });
-    setSubmitting(false);
   };
 
-  const handleDeleteOrder = async (id: string) => {
-    try {
-      const order = orders.find(o => o.id === id);
-      if (order?.mongoId) {
-        await API.delete(`/orders/${order.mongoId}`);
+  const handleDeleteOrder = async (orderItem: OrderItemData) => {
+    if (orderItem.mongoId) {
+      try {
+        await fetch(`http://127.0.0.1:4000/api/orders/${orderItem.mongoId}`, { method: 'DELETE' });
+      } catch (e) {
+        console.warn('Delete error:', e);
       }
-    } catch (e) {
-      console.warn('API delete failed:', e);
     }
-    const updated = orders.filter(o => o.id !== id);
-    setOrders(updated);
-    setSelectedIds(prev => prev.filter(item => item !== id));
-    setActiveMenuOrderId(null);
-    if (detailOrder?.id === id) setDetailOrder(null);
-    showToast(`Order ${id} deleted.`);
-  };
-
-  const handleUpdateStatus = (id: string, newStatus: OrderItemData['status']) => {
-    const updated = orders.map(o => o.id === id ? { ...o, status: newStatus } : o);
-    setOrders(updated);
-    setActiveMenuOrderId(null);
-    if (detailOrder?.id === id) {
-      setDetailOrder({ ...detailOrder, status: newStatus });
-    }
-    showToast(`Order ${id} status updated to ${newStatus}`);
+    setOrders(prev => prev.filter(o => o.id !== orderItem.id));
+    if (detailOrder?.id === orderItem.id) setDetailOrder(null);
+    showToast(`Order ${orderItem.id} deleted.`);
   };
 
   const getStatusBadge = (status: OrderItemData['status']) => {
     switch (status) {
       case 'Complete':
-        return (
-          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
-            <CheckCircle2 className="w-3 h-3 text-emerald-600" />
-            <span>Complete</span>
-          </span>
-        );
+        return <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">Complete</span>;
       case 'Pending':
-        return (
-          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-amber-50 text-amber-700 border border-amber-200">
-            <Clock className="w-3 h-3 text-amber-600" />
-            <span>Pending</span>
-          </span>
-        );
+        return <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-amber-50 text-amber-700 border border-amber-200">Pending</span>;
       case 'Cancel':
-        return (
-          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-rose-50 text-rose-700 border border-rose-200">
-            <XCircle className="w-3 h-3 text-rose-600" />
-            <span>Cancel</span>
-          </span>
-        );
+        return <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-rose-50 text-rose-700 border border-rose-200">Cancel</span>;
       case 'Hold':
-        return (
-          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-sky-50 text-sky-700 border border-sky-200">
-            <AlertCircle className="w-3 h-3 text-sky-600" />
-            <span>Hold</span>
-          </span>
-        );
+        return <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-sky-50 text-sky-700 border border-sky-200">Hold</span>;
       default:
         return null;
     }
@@ -265,71 +337,73 @@ export const OrderListPage: React.FC<OrderListPageProps> = () => {
   return (
     <div className="p-4 sm:p-6 space-y-6 max-w-[1600px] mx-auto transition-all">
       {notification && (
-        <div className="fixed bottom-6 right-6 z-50 bg-slate-900 text-white text-xs font-semibold px-4 py-3 rounded-xl shadow-xl flex items-center gap-2 border border-slate-700 animate-in fade-in duration-200">
+        <div className="fixed bottom-6 right-6 z-50 bg-slate-900 text-white text-xs font-semibold px-4 py-3 rounded-xl shadow-xl flex items-center gap-2">
           <Check className="w-4 h-4 text-emerald-400" />
           <span>{notification}</span>
         </div>
       )}
 
-      {/* Top Header */}
+      {/* Status Bar */}
+      <div className="flex items-center justify-between bg-white p-3 px-4 rounded-xl border border-slate-100 shadow-xs">
+        <div className="flex items-center gap-2">
+          {isConnected ? (
+            <span className="flex items-center gap-1.5 text-xs font-bold text-emerald-700 bg-emerald-50 px-3 py-1 rounded-full border border-emerald-200">
+              <Wifi className="w-3.5 h-3.5 text-emerald-600" /> 🟢 Connected to 127.0.0.1:4000 MongoDB Backend
+            </span>
+          ) : isConnected === false ? (
+            <span className="flex items-center gap-1.5 text-xs font-bold text-rose-700 bg-rose-50 px-3 py-1 rounded-full border border-rose-200">
+              <WifiOff className="w-3.5 h-3.5 text-rose-600" /> 🔴 Disconnected. Ensure "node index.js" is running in Terminal
+            </span>
+          ) : (
+            <span className="text-xs text-slate-400">Connecting to server...</span>
+          )}
+        </div>
+
+        <button
+          onClick={fetchOrders}
+          className="px-3 py-1.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-xs font-semibold flex items-center gap-1.5 cursor-pointer"
+        >
+          <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
+          <span>Retry / Refresh</span>
+        </button>
+      </div>
+
+      {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
-          <h1 className="text-xl font-bold text-slate-800">Orders Management ({orders.length})</h1>
-          <div className="flex items-center gap-1.5 text-xs text-slate-500 font-medium mt-1">
-            <Home className="w-3.5 h-3.5 text-[#5e35b1]" />
-            <ChevronRight className="w-3.5 h-3.5 text-slate-400" />
-            <span className="text-slate-600">Order</span>
-            <ChevronRight className="w-3.5 h-3.5 text-slate-400" />
-            <span className="text-[#5e35b1] font-semibold">List</span>
-          </div>
+          <h1 className="text-xl font-bold text-slate-800">Live Website Orders ({orders.length})</h1>
         </div>
 
-        <div className="flex items-center gap-2.5">
-          <button
-            onClick={fetchOrders}
-            className="px-3 py-2 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-600 text-xs font-semibold flex items-center gap-1.5 transition-all shadow-xs"
-            title="Refresh Orders"
-          >
-            <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
-            <span>Refresh</span>
-          </button>
-
-          <button
-            onClick={() => setIsAddModalOpen(true)}
-            className="px-3.5 py-2 rounded-xl bg-[#5e35b1] hover:bg-[#4527a0] text-white text-xs font-semibold flex items-center gap-1.5 transition-all shadow-xs"
-          >
-            <Plus className="w-3.5 h-3.5" />
-            <span>Create Order</span>
-          </button>
-        </div>
+        <button
+          onClick={() => setIsAddModalOpen(true)}
+          className="px-3.5 py-2 rounded-xl bg-[#5e35b1] hover:bg-[#4527a0] text-white text-xs font-semibold flex items-center gap-1.5 cursor-pointer"
+        >
+          <Plus className="w-3.5 h-3.5" />
+          <span>Create Order</span>
+        </button>
       </div>
 
       {/* Table Card */}
       <div className="bg-white rounded-2xl border border-slate-100 shadow-xs overflow-hidden">
-        <div className="p-4 sm:p-5 flex flex-col md:flex-row md:items-center justify-between gap-3 border-b border-slate-100">
+        <div className="p-4 flex flex-col md:flex-row justify-between gap-3 border-b border-slate-100">
           <div className="relative w-full md:w-80">
             <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
             <input
               type="text"
-              placeholder="Search by Order ID, customer, city..."
+              placeholder="Search customer, Order ID, city..."
               value={searchQuery}
               onChange={(e) => { setSearchQuery(e.target.value); setPage(1); }}
-              className="w-full pl-9 pr-4 py-2 text-xs bg-white border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 text-slate-700 placeholder-slate-400"
+              className="w-full pl-9 pr-4 py-2 text-xs bg-white border border-slate-200 rounded-xl"
             />
           </div>
 
-          <div className="flex items-center gap-2 overflow-x-auto pb-1 md:pb-0">
-            <span className="text-xs font-semibold text-slate-400 flex items-center gap-1">
-              <Filter className="w-3.5 h-3.5" /> Status:
-            </span>
+          <div className="flex items-center gap-2">
             {['All', 'Complete', 'Pending', 'Hold', 'Cancel'].map((status) => (
               <button
                 key={status}
                 onClick={() => { setSelectedStatus(status); setPage(1); }}
-                className={`px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-all ${
-                  selectedStatus === status
-                    ? 'bg-[#ede7f6] text-[#5e35b1] border border-purple-200 shadow-xs'
-                    : 'bg-slate-50 text-slate-600 hover:bg-slate-100'
+                className={`px-3 py-1.5 rounded-xl text-xs font-semibold ${
+                  selectedStatus === status ? 'bg-[#ede7f6] text-[#5e35b1]' : 'bg-slate-50 text-slate-600'
                 }`}
               >
                 {status}
@@ -342,18 +416,18 @@ export const OrderListPage: React.FC<OrderListPageProps> = () => {
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse">
             <thead>
-              <tr className="border-b border-slate-100 text-[11px] font-bold text-slate-500 uppercase tracking-wider bg-slate-50/50">
+              <tr className="border-b border-slate-100 text-[11px] font-bold text-slate-500 uppercase bg-slate-50">
                 <th className="py-3.5 px-4 w-12">
                   <input
                     type="checkbox"
                     checked={paginatedOrders.length > 0 && selectedIds.length === paginatedOrders.length}
                     onChange={toggleSelectAll}
-                    className="w-4 h-4 rounded border-slate-300 text-purple-600 cursor-pointer"
+                    className="w-4 h-4 rounded border-slate-300 text-purple-600"
                   />
                 </th>
                 <th className="py-3.5 px-4">Order ID</th>
                 <th className="py-3.5 px-4">Customer</th>
-                <th className="py-3.5 px-4">Location / City</th>
+                <th className="py-3.5 px-4">City</th>
                 <th className="py-3.5 px-4">Payment</th>
                 <th className="py-3.5 px-4 text-center">Items</th>
                 <th className="py-3.5 px-4 text-center">Total Price</th>
@@ -365,9 +439,9 @@ export const OrderListPage: React.FC<OrderListPageProps> = () => {
             <tbody className="divide-y divide-slate-100 text-xs">
               {loading && (
                 <tr>
-                  <td colSpan={10} className="text-center py-10 text-slate-500 font-medium">
+                  <td colSpan={10} className="text-center py-10 text-slate-500">
                     <RefreshCw className="w-5 h-5 animate-spin mx-auto mb-2 text-purple-600" />
-                    Loading orders...
+                    Fetching live orders...
                   </td>
                 </tr>
               )}
@@ -375,96 +449,37 @@ export const OrderListPage: React.FC<OrderListPageProps> = () => {
               {!loading && paginatedOrders.map((order) => {
                 const isSelected = selectedIds.includes(order.id);
                 return (
-                  <tr 
-                    key={order.id} 
-                    className={`hover:bg-slate-50/80 transition-colors relative ${isSelected ? 'bg-purple-50/30' : ''}`}
-                  >
+                  <tr key={order.id} className={`hover:bg-slate-50/80 ${isSelected ? 'bg-purple-50/30' : ''}`}>
                     <td className="py-3.5 px-4">
                       <input
                         type="checkbox"
                         checked={isSelected}
                         onChange={() => toggleSelectOne(order.id)}
-                        className="w-4 h-4 rounded border-slate-300 text-purple-600 cursor-pointer"
+                        className="w-4 h-4 rounded border-slate-300 text-purple-600"
                       />
                     </td>
-                    <td 
-                      onClick={() => setDetailOrder(order)}
-                      className="py-3.5 px-4 font-mono font-semibold text-purple-700 hover:underline cursor-pointer"
-                    >
+                    <td onClick={() => setDetailOrder(order)} className="py-3.5 px-4 font-mono font-semibold text-purple-700 hover:underline cursor-pointer">
                       {order.id}
                     </td>
                     <td className="py-3.5 px-4">
-                      <div className="font-medium text-slate-800">{order.customerName}</div>
+                      <div className="font-bold text-slate-800">{order.customerName}</div>
                       <div className="text-[11px] text-slate-400">{order.customerEmail}</div>
                     </td>
-                    <td className="py-3.5 px-4 text-slate-600 font-medium">
-                      {order.branch}
-                    </td>
-                    <td className="py-3.5 px-4 text-slate-600 font-medium">
-                      {order.paymentType}
-                    </td>
-                    <td className="py-3.5 px-4 text-center font-medium text-slate-700">
-                      {order.quantity}
-                    </td>
-                    <td className="py-3.5 px-4 text-center font-bold text-slate-900">
-                      ${order.totalPrice.toFixed(2)}
-                    </td>
-                    <td className="py-3.5 px-4 text-slate-500 whitespace-nowrap">
-                      {order.orderDate}
-                    </td>
-                    <td className="py-3.5 px-4">
-                      {getStatusBadge(order.status)}
-                    </td>
-                    <td className="py-3.5 px-4 text-center relative">
+                    <td className="py-3.5 px-4 font-medium text-slate-600">{order.branch}</td>
+                    <td className="py-3.5 px-4 font-medium text-slate-600">{order.paymentType}</td>
+                    <td className="py-3.5 px-4 text-center font-medium text-slate-700">{order.quantity}</td>
+                    <td className="py-3.5 px-4 text-center font-bold text-slate-900">${order.totalPrice.toFixed(2)}</td>
+                    <td className="py-3.5 px-4 text-slate-500">{order.orderDate}</td>
+                    <td className="py-3.5 px-4">{getStatusBadge(order.status)}</td>
+                    <td className="py-3.5 px-4 text-center">
                       <div className="flex items-center justify-center gap-1">
-                        <button
-                          onClick={() => setDetailOrder(order)}
-                          className="p-1.5 text-slate-500 hover:text-purple-600 rounded-lg hover:bg-slate-100"
-                          title="View Order Details"
-                        >
+                        <button onClick={() => setDetailOrder(order)} className="p-1.5 text-slate-500 hover:text-purple-600">
                           <Eye className="w-4 h-4" />
                         </button>
-                        <button
-                          onClick={() => setActiveMenuOrderId(activeMenuOrderId === order.id ? null : order.id)}
-                          className="p-1.5 text-slate-400 hover:text-slate-700 rounded-lg hover:bg-slate-100"
-                          title="More Actions"
-                        >
-                          <MoreVertical className="w-4 h-4" />
+                        <button onClick={() => handleDeleteOrder(order)} className="p-1.5 text-rose-500 hover:bg-rose-50 rounded-lg">
+                          <Trash2 className="w-4 h-4" />
                         </button>
                       </div>
-
-                      {activeMenuOrderId === order.id && (
-                        <div className="absolute right-4 top-10 z-30 w-44 bg-white rounded-xl shadow-xl border border-slate-100 p-1.5 text-left text-xs font-medium text-slate-700 space-y-1">
-                          <button
-                            onClick={() => setDetailOrder(order)}
-                            className="w-full text-left px-3 py-1.5 hover:bg-purple-50 hover:text-purple-700 rounded-lg flex items-center gap-2"
-                          >
-                            <Eye className="w-3.5 h-3.5" /> View Details
-                          </button>
-                          <div className="border-t border-slate-100 my-1 pt-1">
-                            <button
-                              onClick={() => handleUpdateStatus(order.id, 'Complete')}
-                              className="w-full text-left px-3 py-1 hover:bg-emerald-50 text-emerald-700 rounded-lg flex items-center gap-1.5"
-                            >
-                              <CheckCircle2 className="w-3 h-3" /> Mark Complete
-                            </button>
-                            <button
-                              onClick={() => handleUpdateStatus(order.id, 'Pending')}
-                              className="w-full text-left px-3 py-1 hover:bg-amber-50 text-amber-700 rounded-lg flex items-center gap-1.5"
-                            >
-                              <Clock className="w-3 h-3" /> Mark Pending
-                            </button>
-                          </div>
-                          <div className="border-t border-slate-100 my-1 pt-1">
-                            <button
-                              onClick={() => handleDeleteOrder(order.id)}
-                              className="w-full text-left px-3 py-1.5 hover:bg-rose-50 text-rose-600 rounded-lg flex items-center gap-2 font-semibold"
-                            >
-                              <Trash2 className="w-3.5 h-3.5" /> Delete Order
-                            </button>
-                          </div>
-                        </div>
-                      )}
                     </td>
                   </tr>
                 );
@@ -473,7 +488,7 @@ export const OrderListPage: React.FC<OrderListPageProps> = () => {
               {!loading && paginatedOrders.length === 0 && (
                 <tr>
                   <td colSpan={10} className="text-center py-12 text-slate-400 font-medium">
-                    No live orders in database.
+                    No orders found in MongoDB Atlas database.
                   </td>
                 </tr>
               )}
@@ -481,218 +496,36 @@ export const OrderListPage: React.FC<OrderListPageProps> = () => {
           </table>
         </div>
 
-        {/* Pagination Row */}
-        <div className="p-4 border-t border-slate-100 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-slate-600">
-          <div>
-            Showing <strong className="text-slate-800">{totalRows === 0 ? 0 : startIndex + 1}</strong> to <strong className="text-slate-800">{Math.min(startIndex + rowsPerPage, totalRows)}</strong> of <strong className="text-slate-800">{totalRows}</strong> orders
-          </div>
-
-          <div className="flex items-center gap-6">
-            <div className="flex items-center gap-2">
-              <span>Rows per page:</span>
-              <select
-                value={rowsPerPage}
-                onChange={(e) => { setRowsPerPage(Number(e.target.value)); setPage(1); }}
-                className="bg-transparent font-semibold border border-slate-200 rounded-lg py-1 px-2 focus:outline-none cursor-pointer"
-              >
-                <option value={5}>5</option>
-                <option value={10}>10</option>
-                <option value={25}>25</option>
-              </select>
-            </div>
-
-            <div className="flex items-center gap-1">
-              <button
-                disabled={page <= 1}
-                onClick={() => setPage(p => Math.max(1, p - 1))}
-                className="p-1.5 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50 disabled:opacity-30 cursor-pointer disabled:cursor-not-allowed"
-              >
-                <ChevronLeft className="w-4 h-4" />
-              </button>
-              <span className="px-2 font-semibold">Page {page}</span>
-              <button
-                disabled={startIndex + rowsPerPage >= totalRows}
-                onClick={() => setPage(p => p + 1)}
-                className="p-1.5 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50 disabled:opacity-30 cursor-pointer disabled:cursor-not-allowed"
-              >
-                <ChevronRight className="w-4 h-4" />
-              </button>
-            </div>
+        <div className="p-4 border-t border-slate-100 flex items-center justify-between text-xs text-slate-600">
+          <div>Showing <strong>{totalRows === 0 ? 0 : startIndex + 1}</strong> to <strong>{Math.min(startIndex + rowsPerPage, totalRows)}</strong> of <strong>{totalRows}</strong> orders</div>
+          <div className="flex items-center gap-4">
+            <button disabled={page <= 1} onClick={() => setPage(p => Math.max(1, p - 1))} className="p-1.5 border rounded-lg disabled:opacity-30">
+              <ChevronLeft className="w-4 h-4" />
+            </button>
+            <span className="font-semibold">Page {page}</span>
+            <button disabled={startIndex + rowsPerPage >= totalRows} onClick={() => setPage(p => p + 1)} className="p-1.5 border rounded-lg disabled:opacity-30">
+              <ChevronRight className="w-4 h-4" />
+            </button>
           </div>
         </div>
       </div>
 
-      {/* Create Order Modal */}
-      {isAddModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-xs p-4 overflow-y-auto">
-          <div className="bg-white rounded-2xl border border-slate-100 shadow-2xl max-w-lg w-full p-6 space-y-4 my-8">
-            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
-              <div className="flex items-center gap-2.5">
-                <div className="w-8 h-8 rounded-xl bg-[#ede7f6] flex items-center justify-center text-[#5e35b1]">
-                  <Plus className="w-4 h-4" />
-                </div>
-                <div>
-                  <h3 className="text-sm font-bold text-slate-800">Create New Order</h3>
-                  <p className="text-[11px] text-slate-400">Add order details to live database</p>
-                </div>
-              </div>
-              <button
-                onClick={() => setIsAddModalOpen(false)}
-                className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-
-            <form onSubmit={handleAddOrderSubmit} className="space-y-3.5">
-              <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">Customer Name *</label>
-                <input
-                  type="text"
-                  required
-                  placeholder="e.g. John Doe"
-                  value={newOrder.customerName}
-                  onChange={e => setNewOrder({ ...newOrder, customerName: e.target.value })}
-                  className="w-full px-3.5 py-2 text-xs border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500"
-                />
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1">Customer Email</label>
-                  <input
-                    type="email"
-                    placeholder="john@example.com"
-                    value={newOrder.customerEmail}
-                    onChange={e => setNewOrder({ ...newOrder, customerEmail: e.target.value })}
-                    className="w-full px-3.5 py-2 text-xs border border-slate-200 rounded-xl"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1">City / Branch</label>
-                  <input
-                    type="text"
-                    placeholder="e.g. Karachi, Pakistan"
-                    value={newOrder.branch}
-                    onChange={e => setNewOrder({ ...newOrder, branch: e.target.value })}
-                    className="w-full px-3.5 py-2 text-xs border border-slate-200 rounded-xl"
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1">Total ($) *</label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    required
-                    placeholder="120.00"
-                    value={newOrder.totalPrice}
-                    onChange={e => setNewOrder({ ...newOrder, totalPrice: e.target.value })}
-                    className="w-full px-3.5 py-2 text-xs border border-slate-200 rounded-xl"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1">Initial Status</label>
-                  <select
-                    value={newOrder.status}
-                    onChange={e => setNewOrder({ ...newOrder, status: e.target.value as any })}
-                    className="w-full px-3.5 py-2 text-xs border border-slate-200 rounded-xl bg-white"
-                  >
-                    <option value="Pending">Pending</option>
-                    <option value="Complete">Complete</option>
-                    <option value="Hold">Hold</option>
-                    <option value="Cancel">Cancel</option>
-                  </select>
-                </div>
-              </div>
-
-              <div className="pt-2 flex items-center justify-end gap-2.5">
-                <button
-                  type="button"
-                  onClick={() => setIsAddModalOpen(false)}
-                  className="px-4 py-2 rounded-xl border border-slate-200 text-xs font-semibold text-slate-600 hover:bg-slate-50"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={submitting}
-                  className="px-4 py-2 rounded-xl bg-[#5e35b1] hover:bg-[#4527a0] text-white text-xs font-semibold flex items-center gap-1.5 shadow-xs"
-                >
-                  <Plus className="w-3.5 h-3.5" />
-                  <span>{submitting ? 'Creating...' : 'Save Order'}</span>
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* Details Modal */}
       {detailOrder && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-xs p-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 p-4">
           <div className="bg-white rounded-2xl border border-slate-100 shadow-2xl max-w-lg w-full p-6 space-y-4">
-            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
-              <div>
-                <span className="text-[11px] font-bold text-purple-600 font-mono">{detailOrder.id}</span>
-                <h3 className="text-sm font-bold text-slate-900">Order Details</h3>
-              </div>
-              <button
-                onClick={() => setDetailOrder(null)}
-                className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700"
-              >
-                <X className="w-4 h-4" />
-              </button>
+            <div className="flex justify-between items-center pb-2 border-b">
+              <h3 className="font-bold text-slate-900">Order Details ({detailOrder.id})</h3>
+              <button onClick={() => setDetailOrder(null)}><X className="w-4 h-4" /></button>
             </div>
-
-            <div className="space-y-3 text-xs">
-              <div className="flex justify-between items-center bg-slate-50 p-3 rounded-xl border border-slate-100">
-                <div>
-                  <div className="text-[11px] text-slate-400">Customer Name</div>
-                  <div className="font-bold text-slate-800 text-sm">{detailOrder.customerName}</div>
-                  <div className="text-slate-500">{detailOrder.customerEmail}</div>
-                </div>
-                <div>{getStatusBadge(detailOrder.status)}</div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div className="bg-slate-50 p-3 rounded-xl border border-slate-100">
-                  <div className="text-[11px] text-slate-400">Payment & City</div>
-                  <div className="font-semibold text-slate-700">{detailOrder.paymentType}</div>
-                  <div className="text-slate-500">{detailOrder.branch}</div>
-                </div>
-                <div className="bg-slate-50 p-3 rounded-xl border border-slate-100">
-                  <div className="text-[11px] text-slate-400">Total Price & Date</div>
-                  <div className="font-bold text-slate-900 text-sm">${detailOrder.totalPrice.toFixed(2)}</div>
-                  <div className="text-slate-500">{detailOrder.orderDate}</div>
-                </div>
-              </div>
-
-              <div className="bg-slate-50 p-3 rounded-xl border border-slate-100">
-                <div className="text-[11px] text-slate-400">Items Ordered</div>
-                <div className="font-semibold text-slate-700 mt-0.5">{detailOrder.itemsSummary || 'Standard Product Package'}</div>
-              </div>
+            <div className="space-y-2 text-xs">
+              <p><strong>Customer:</strong> {detailOrder.customerName}</p>
+              <p><strong>Items:</strong> {detailOrder.itemsSummary}</p>
+              <p><strong>Shipping:</strong> {detailOrder.shippingAddress}</p>
+              <p><strong>Total:</strong> ${detailOrder.totalPrice.toFixed(2)}</p>
             </div>
-
-            <div className="flex items-center justify-between pt-3 border-t border-slate-100">
-              <button
-                onClick={() => handleDeleteOrder(detailOrder.id)}
-                className="px-3.5 py-2 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-600 text-xs font-semibold flex items-center gap-1.5"
-              >
-                <Trash2 className="w-3.5 h-3.5" />
-                <span>Delete Order</span>
-              </button>
-
-              <button
-                onClick={() => setDetailOrder(null)}
-                className="px-4 py-2 rounded-xl bg-slate-900 text-white text-xs font-semibold"
-              >
-                Close
-              </button>
+            <div className="flex justify-end gap-2 pt-2">
+              <button onClick={() => handleDeleteOrder(detailOrder)} className="px-3 py-1.5 bg-rose-50 text-rose-600 rounded-lg font-semibold">Delete</button>
+              <button onClick={() => setDetailOrder(null)} className="px-4 py-1.5 bg-slate-900 text-white rounded-lg">Close</button>
             </div>
           </div>
         </div>

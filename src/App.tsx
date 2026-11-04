@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState,useEffect} from 'react';
 import { ThemeConfig } from './types';
 import { BerryHeader } from './components/berry/BerryHeader';
 import { BerrySidebar } from './components/berry/BerrySidebar';
@@ -8,8 +8,22 @@ import { CustomerListPage } from './components/pages/CustomerListPage';
 import { ProductPage } from './components/pages/ProductPage';
 import { BerryCustomizerDrawer } from './components/berry/BerryCustomizerDrawer';
 import { Settings } from 'lucide-react';
+import socket from '../socket';
 
 export default function App() {
+  console.log('ADMIN APP LOADED');
+  useEffect(() => {
+  console.log('Socket instance:', socket);
+  console.log('Socket connected:', socket.connected);
+
+  if (!socket.connected) {
+    socket.connect();
+  }
+
+  return () => {
+    // Filhal disconnect mat karna
+  };
+}, []);
   // Active Sidebar Item for Berry: 'default' (Dashboard), 'customer-list', or 'order-list'
   const [activeSidebarItem, setActiveSidebarItem] = useState<string>('default');
 
@@ -62,10 +76,7 @@ export default function App() {
           )}
 
           {(activeSidebarItem === 'products' || activeSidebarItem === 'product-details') && (
-            <ProductPage 
-              themeConfig={themeConfig} 
-              initialViewMode={activeSidebarItem === 'product-details' ? 'details' : 'list'} 
-            />
+            <ProductPage themeConfig={themeConfig} />
           )}
 
           {activeSidebarItem !== 'customer-list' && 

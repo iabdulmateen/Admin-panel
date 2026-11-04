@@ -1,16 +1,10 @@
 import axios from 'axios';
 
 const API = axios.create({
-  baseURL: typeof window !== 'undefined' ? `${window.location.origin}/api` : '/api',
-});
-
-// Admin token attach karne ke liye (agar admin login ho)
-API.interceptors.request.use((config) => {
-  const token = localStorage.getItem('adminToken') || localStorage.getItem('token');
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`;
-  }
-  return config;
+  baseURL: 'http://127.0.0.1:4000/api', // 👈 127.0.0.1 IPv4 connection refusal bypass karta hai
+  headers: {
+    'Content-Type': 'application/json',
+  },
 });
 
 export default API;
